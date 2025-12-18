@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge';
+// REMOVED: export const runtime = 'edge'; 
+// OpenNext automatically optimizes this for Cloudflare via 'nodejs_compat'
 
-// 1. Define the Upstream API Interface (What binlist.io returns)
 interface BinListResponse {
   number: {
     length: number;
@@ -40,45 +40,42 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Please provide a "bin" query parameter.' }, { status: 400 });
     }
 
-    // Sanitize input: Binlist.io requires the first 6 or 8 digits
     const bin = binInput.replace(/\D/g, '').substring(0, 6);
 
     if (bin.length < 6) {
       return NextResponse.json({ error: 'BIN must contain at least 6 digits.' }, { status: 400 });
     }
 
-    // 2. Fetch from External API
-    // Note: binlist.io has a rate limit (approx 10 requests/min for free tier).
     const apiUrl = `https://binlist.io/lookup/${bin}`;
     console.log(`Fetching upstream: ${apiUrl}`);
 
     const response = await fetch(apiUrl, {
       headers: {
-        'Accept-Version': '3', // Good practice for external APIs
+        'Accept-Version': '3',
       },
+      // PROFESSIONAL TIP: Cache this request for 1 hour (3600s).
+      // This makes repeated lookups instant and avoids API rate limits.
+      next: { revalidate: 3600 } 
     });
 
-    // Handle 404 (BIN not found) specifically
     if (response.status === 404) {
       return NextResponse.json({ success: false, error: 'BIN not found in global database.' }, { status: 404 });
     }
 
-    // Handle other errors (Rate limits, server errors)
     if (!response.ok) {
       console.error(`Upstream Error: ${response.status} ${response.statusText}`);
-      return NextResponse.json({ error: 'External service unavailable. Please try again later.' }, { status: 502 });
+      // Return a generic error so we don't leak upstream details
+      return NextResponse.json({ error: 'Service temporarily unavailable.' }, { status: 502 });
     }
 
     const data = (await response.json()) as BinListResponse;
 
-    // 3. Adapter: Map External Data to Internal Format
-    // This ensures your frontend (BinChecker.tsx) works without ANY changes.
     return NextResponse.json({
       success: true,
       data: {
         bin: bin,
-        brand: data.scheme || 'Unknown', // "VISA", "MASTERCARD"
-        type: data.type || 'Unknown',   // "DEBIT", "CREDIT"
+        brand: data.scheme || 'Unknown',
+        type: data.type || 'Unknown',
         category: data.category || '',
         issuer: data.bank?.name || 'Unknown',
         issuer_phone: data.bank?.phone || '',
