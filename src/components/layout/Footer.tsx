@@ -29,7 +29,7 @@ export function Footer() {
             {/* Social Links */}
             <div className="flex items-center gap-4">
               <SocialLink href="https://t.me/drkingbd" icon={<Send size={18} />} label="Telegram" />
-              <SocialLink href="https://github.com/saikothasan/nn" icon={<Github size={18} />} label="GitHub" />
+              <SocialLink href="https://github.com/saikothasan/Prokit" icon={<Github size={18} />} label="GitHub" />
               <SocialLink href="#" icon={<Twitter size={18} />} label="Twitter" />
             </div>
           </div>
