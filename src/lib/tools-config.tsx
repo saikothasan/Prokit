@@ -1,5 +1,6 @@
 import { 
-  Cpu, 
+  Cpu,
+  Camera,
   Lock, 
   Globe, 
   Image as ImageIcon, 
