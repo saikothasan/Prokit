@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'BIN must contain at least 6 digits.' }, { status: 400 });
     }
 
-    const csvPath = path.join(process.cwd(), 'src/data/bin-list-data.csv');
+    const csvPath = path.join(process.cwd(), '@/data/bin-list-data.csv');
 
     if (!fs.existsSync(csvPath)) {
       console.error(`BIN data file not found at: ${csvPath}`);
