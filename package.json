@@ -17,7 +17,7 @@
 		"next": "15.5.9",
 		"csv-parse": "latest",
 		"lucide-react": "latest",
-		"ai": "latest",
+		"@cloudflare/puppeteer": "latest",
 		"react": "19.1.4",
 		"react-dom": "19.1.4"
 	},
