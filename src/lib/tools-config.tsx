@@ -21,6 +21,11 @@ const Translator = dynamic(() => import('@/components/tools/ai/Translator'), {
   loading: () => <ToolLoader name="AI Translator" />,
 });
 
+// Browser Tool Import
+const ScreenshotTool = dynamic(() => import('@/components/tools/browser/Screenshot'), {
+  loading: () => <ToolLoader name="Screenshot Tool" />,
+});
+
 // --- 2. Type Definitions ---
 export type ToolCategory = 'ai' | 'security' | 'dns' | 'image' | 'email';
 
@@ -44,6 +49,15 @@ export const tools: Tool[] = [
     icon: Lock,
     keywords: ['bin lookup', 'credit card validator', 'bank identifier', 'payment security'],
     component: BinChecker,
+  },
+  {
+    slug: 'website-screenshot',
+    name: 'Website Screenshot',
+    description: 'Capture high-quality screenshots of any website using Cloudflare Browser Rendering.',
+    category: 'image',
+    icon: Camera,
+    keywords: ['screenshot', 'capture', 'web', 'browser', 'rendering'],
+    component: ScreenshotTool,
   },
   {
     slug: 'ai-translator',
