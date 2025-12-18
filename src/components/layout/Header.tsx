@@ -40,7 +40,7 @@ export function Header() {
         {/* 3. Action Buttons (Desktop) */}
         <div className="hidden md:flex items-center gap-3">
           <Link 
-            href="https://github.com/saikothasan/nn" 
+            href="https://github.com/saikothasan/Prokit" 
             target="_blank"
             className="p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
             title="Star on GitHub"
