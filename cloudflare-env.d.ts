@@ -3,11 +3,30 @@
 // Runtime types generated with workerd@1.20251213.0 2025-12-01 global_fetch_strictly_public,nodejs_compat
 declare namespace Cloudflare {
 	interface Env {
+		// Environment Variables
 		NEXTJS_ENV: string;
-		WORKER_SELF_REFERENCE: Fetcher /* bb */;
-		IMAGES: ImagesBinding;
+
+		// 1. Assets & Observability
 		ASSETS: Fetcher;
-		AI: any;
+
+		// 2. Storage Bindings
+		DB: D1Database;
+		KV: KVNamespace;
+		NEXT_INC_CACHE_R2_BUCKET: R2Bucket;
+		MY_FILES: R2Bucket;
+
+		// 3. AI & Browser Bindings
+		AI: any; // Using 'any' to prevent build errors if @cloudflare/workers-types isn't fully synced
+		MY_BROWSER: Fetcher; // Browser Rendering binding
+
+		// 4. Media
+		IMAGES: Fetcher; // Cloudflare Images binding
+
+		// 5. Security & Rate Limiting
+		RATE_LIMITER: any; // Rate Limit binding
+
+		// 6. Internal Services
+		WORKER_SELF_REFERENCE: Fetcher;
 	}
 }
 interface CloudflareEnv extends Cloudflare.Env {}
