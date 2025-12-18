@@ -2,7 +2,15 @@
 
 import React, { useState } from 'react';
 import { Sparkles, Globe, ArrowRight, Loader2, ScanEye } from 'lucide-react';
-import ReactMarkdown from 'react-markdown'; // Ensure you have this or render plain text
+
+// FIX: Define the expected response shape
+interface AuditResponse {
+  success?: boolean;
+  screenshot?: string;
+  analysis?: string;
+  details?: string;
+  error?: string;
+}
 
 export default function SiteAuditTool() {
   const [url, setUrl] = useState('');
@@ -22,12 +30,17 @@ export default function SiteAuditTool() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, focus }),
       });
-      const data = await res.json();
       
-      if (data.success) {
-        setResult(data);
+      // FIX: Cast response to interface
+      const data = (await res.json()) as AuditResponse;
+      
+      if (data.success && data.screenshot && data.analysis) {
+        setResult({
+          screenshot: data.screenshot,
+          analysis: data.analysis
+        });
       } else {
-        alert(data.details || "Failed to run audit");
+        alert(data.details || data.error || "Failed to run audit");
       }
     } catch (err) {
       console.error(err);
@@ -47,7 +60,8 @@ export default function SiteAuditTool() {
         </div>
         <h1 className="text-4xl font-bold text-zinc-900 dark:text-white">SiteScan AI Auditor</h1>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          Enter a URL to generate an instant visual snapshot and AI-powered technical audit using Neural Network.
+          {/* FIX: Escaped apostrophe */}
+          Enter a URL to generate an instant visual snapshot and AI-powered technical audit using Cloudflare&apos;s Neural Network.
         </p>
       </div>
 
@@ -115,7 +129,6 @@ export default function SiteAuditTool() {
           <div className="space-y-4">
             <h3 className="font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-sm">AI Intelligence Report</h3>
             <div className="prose prose-zinc dark:prose-invert max-w-none bg-white dark:bg-zinc-900 p-8 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm h-full max-h-[600px] overflow-y-auto custom-scrollbar">
-              {/* If you haven't installed react-markdown yet, simpler rendering: */}
               <div className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
                 {result.analysis}
               </div>
