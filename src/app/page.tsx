@@ -24,7 +24,7 @@ export default function Home() {
           
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-12 max-w-2xl mx-auto leading-relaxed">
             A privacy-focused suite of utilities for developers. Open Source, 
-            no tracking, and powered by Cloudflare's edge network.
+            no tracking, and powered by Cloudflare&apos;s edge network.
           </p>
           
           {/* Search Input */}
