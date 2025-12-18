@@ -47,7 +47,7 @@ export default function SiteAuditTool() {
         </div>
         <h1 className="text-4xl font-bold text-zinc-900 dark:text-white">SiteScan AI Auditor</h1>
         <p className="text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          Enter a URL to generate an instant visual snapshot and AI-powered technical audit using Cloudflare's Neural Network.
+          Enter a URL to generate an instant visual snapshot and AI-powered technical audit using Neural Network.
         </p>
       </div>
 
