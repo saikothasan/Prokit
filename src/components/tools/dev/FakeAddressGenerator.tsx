@@ -74,6 +74,14 @@ interface AddressData {
   timeZone: string;
 }
 
+// Define the response shape to fix the 'unknown' type error
+interface AddressApiResponse {
+  success: boolean;
+  data: AddressData;
+  error?: string;
+  details?: string;
+}
+
 export default function FakeAddressGenerator() {
   const [locale, setLocale] = useState('en_US');
   const [data, setData] = useState<AddressData | null>(null);
@@ -88,7 +96,10 @@ export default function FakeAddressGenerator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale }),
       });
-      const json = await res.json();
+      
+      // CAST the response to our interface
+      const json = (await res.json()) as AddressApiResponse;
+      
       if (json.success) {
         setData(json.data);
       }
