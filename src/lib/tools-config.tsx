@@ -1,5 +1,6 @@
 import { 
   Cpu,
+  Bot,
   ScanEye,
   Camera,
   Lock, 
@@ -16,6 +17,10 @@ import ComingSoon from '@/components/ui/ComingSoon';
 // Security Tools
 const BinChecker = dynamic(() => import('@/components/tools/security/BinChecker'), {
   loading: () => <ToolLoader name="BIN Checker" />,
+});
+
+const WebExtractor = dynamic(() => import('@/components/tools/ai/WebExtractor'), {
+  loading: () => <ToolLoader name="AI Web Scraper" />,
 });
 
 // AI Tools (NEW IMPORT ADDED HERE)
@@ -64,6 +69,15 @@ export const tools: Tool[] = [
     icon: ScanEye,
     keywords: ['audit', 'seo', 'ux', 'ai', 'vision'],
     component: SiteAudit,
+  },
+  {
+    slug: 'ai-web-scraper',
+    name: 'Smart Web Scraper',
+    description: 'Extract specific data, summaries, or insights from any webpage using AI and Browser Rendering.',
+    category: 'ai',
+    icon: Bot,
+    keywords: ['scraping', 'extraction', 'ai analysis', 'summary', 'data mining'],
+    component: WebExtractor,
   },
   {
     slug: 'website-screenshot',
