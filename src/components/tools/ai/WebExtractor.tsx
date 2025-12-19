@@ -3,6 +3,14 @@
 import React, { useState } from 'react';
 import { Bot, Globe, Search, Loader2, FileJson, Copy, Check } from 'lucide-react';
 
+// Define the shape of the API response to satisfy TypeScript
+interface ExtractorResponse {
+  success: boolean;
+  data?: string;
+  details?: string;
+  error?: string;
+}
+
 export default function WebExtractor() {
   const [url, setUrl] = useState('');
   const [query, setQuery] = useState('');
@@ -24,15 +32,15 @@ export default function WebExtractor() {
         body: JSON.stringify({ url, query }),
       });
       
-      const data = await res.json();
+      // CAST THE RESULT TO THE INTERFACE
+      const data = (await res.json()) as ExtractorResponse;
       
       if (data.success) {
-        setResult(data.data);
+        setResult(data.data || "No data returned.");
       } else {
-        setResult(`Error: ${data.details || data.error}`);
+        setResult(`Error: ${data.details || data.error || "Unknown error"}`);
       }
     } catch {
-      // Removed the unused 'err' variable to satisfy linter
       setResult("Failed to connect to the extractor API.");
     } finally {
       setLoading(false);
