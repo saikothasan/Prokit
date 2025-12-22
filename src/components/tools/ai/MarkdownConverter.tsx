@@ -27,6 +27,8 @@ export default function MarkdownConverter() {
         setResult(`Error: ${data.error}`);
       }
     } catch (err) {
+      // Fix: Log the error so the variable is 'used'
+      console.error('Conversion request failed:', err);
       setResult('Failed to connect to the server.');
     } finally {
       setLoading(false);
@@ -77,10 +79,9 @@ export default function MarkdownConverter() {
         </div>
       )}
 
-      {/* Feature Badge */}
       <div className="flex items-center gap-2 text-xs text-gray-400 justify-center">
         <FileText className="w-3 h-3" />
-        <span>Llama 3</span>
+        <span>Powered by Cloudflare Browser Rendering & Llama 3</span>
       </div>
     </div>
   );
