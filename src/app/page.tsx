@@ -14,7 +14,7 @@ export default function Home() {
         <div className="relative max-w-5xl mx-auto px-6 pt-32 pb-24 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-semibold mb-6 border border-blue-100 dark:border-blue-800">
             <Sparkles className="w-3 h-3" />
-            <span>v100% FREE</span>
+            <span>100% FREE</span>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-gray-900 dark:text-white mb-8">
