@@ -1,6 +1,7 @@
 import { 
   Cpu,
   ScanEye,
+  FileText,
   Camera,
   Lock, 
   Globe, 
@@ -19,6 +20,9 @@ const BinChecker = dynamic(() => import('@/components/tools/security/BinChecker'
   loading: () => <ToolLoader name="BIN Checker" />,
 });
 
+const MarkdownConverter = dynamic(() => import('@/components/tools/ai/MarkdownConverter'), {
+  loading: () => <ToolLoader name="AI Markdown Converter" />,
+});
 // AI Tools
 const Translator = dynamic(() => import('@/components/tools/ai/Translator'), {
   loading: () => <ToolLoader name="AI Translator" />,
@@ -77,6 +81,15 @@ export const tools: Tool[] = [
     keywords: ['audit', 'seo', 'ux', 'ai', 'vision'],
     component: SiteAudit,
   },
+  {
+  slug: 'ai-markdown-converter',
+  name: 'AI Markdown Converter',
+  description: 'Convert any website into clean, structured Markdown using AI.',
+  category: 'ai',
+  icon: FileText, // Make sure to import FileText from 'lucide-react'
+  keywords: ['markdown', 'converter', 'html to markdown', 'web scraper'],
+  component: MarkdownConverter,
+},
   {
     slug: 'ai-web-scraper',
     name: 'Smart Web Scraper',
