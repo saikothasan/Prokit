@@ -2,8 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from '@cloudflare/puppeteer';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
+export const runtime = 'edge';
+
 interface MarkdownRequestBody {
   url: string;
+}
+
+// 1. Define the interface for the AI model response
+interface AiModelResponse {
+  response?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -79,9 +86,10 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    // Fix: Removed @ts-expect-error as the type is valid in your environment
-    // Use type assertion 'as any' just in case specific types are missing properties
-    const markdown = (response as any).response || "Failed to generate markdown.";
+    // Fix: Cast to 'unknown' first, then to the interface. 
+    // This satisfies the compiler without using 'any'.
+    const aiResult = response as unknown as AiModelResponse;
+    const markdown = aiResult.response || "Failed to generate markdown.";
 
     return NextResponse.json({ success: true, data: markdown });
 
