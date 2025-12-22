@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from '@cloudflare/puppeteer';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-export const runtime = 'edge';
+// REMOVE THIS LINE:
+// export const runtime = 'edge';
 
 interface MarkdownRequestBody {
   url: string;
@@ -86,8 +87,6 @@ export async function POST(req: NextRequest) {
       ]
     });
 
-    // Fix: Cast to 'unknown' first, then to the interface. 
-    // This satisfies the compiler without using 'any'.
     const aiResult = response as unknown as AiModelResponse;
     const markdown = aiResult.response || "Failed to generate markdown.";
 
@@ -95,9 +94,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     console.error('Markdown Error:', error);
-    
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
