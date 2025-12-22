@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from '@cloudflare/puppeteer';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-export const runtime = 'edge';
-
 interface MarkdownRequestBody {
   url: string;
 }
