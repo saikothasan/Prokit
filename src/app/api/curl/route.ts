@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'edge'; // Use Edge Runtime for native fetch performance
-
 interface CurlRequest {
   method: string;
   url: string;
@@ -11,10 +9,11 @@ interface CurlRequest {
 
 export async function POST(req: NextRequest) {
   try {
-    const { method, url, headers, body } = (await req.json()) as CurlRequest;
+    const bodyData = (await req.json()) as Partial<CurlRequest>;
+    const { method, url, headers, body } = bodyData;
 
-    if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    if (!url || !method) {
+      return NextResponse.json({ error: 'URL and Method are required' }, { status: 400 });
     }
 
     // 1. Start Timer
