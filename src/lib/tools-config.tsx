@@ -3,6 +3,7 @@ import {
   ScanEye,
   FileText,
   Camera,
+  Terminal,
   Lock, 
   Globe, 
   Image as ImageIcon,
@@ -22,6 +23,10 @@ const BinChecker = dynamic(() => import('@/components/tools/security/BinChecker'
 
 const DnsLookup = dynamic(() => import('@/components/tools/dns/DnsLookup'), {
   loading: () => <ToolLoader name="DNS Lookup" />,
+});
+
+const CurlRunner = dynamic(() => import('@/components/tools/dev/CurlTool'), {
+  loading: () => <ToolLoader name="Curl Runner" />,
 });
 
 const MarkdownConverter = dynamic(() => import('@/components/tools/ai/MarkdownConverter'), {
@@ -121,6 +126,15 @@ export const tools: Tool[] = [
     keywords: ['faker', 'mock data', 'address', 'testing', 'dev tool'],
     component: FakeAddressGenerator,
   },
+  {
+  slug: 'curl-runner',
+  name: 'Curl Runner',
+  description: 'Execute HTTP requests from the Edge. Inspect status, headers, and performance.',
+  category: 'dev',
+  icon: Terminal, // Import Terminal from 'lucide-react'
+  keywords: ['curl', 'http client', 'api tester', 'fetch'],
+  component: CurlRunner,
+},
   {
     slug: 'ai-translator',
     name: 'AI Translator',
