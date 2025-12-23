@@ -20,6 +20,10 @@ const BinChecker = dynamic(() => import('@/components/tools/security/BinChecker'
   loading: () => <ToolLoader name="BIN Checker" />,
 });
 
+const DnsLookup = dynamic(() => import('@/components/tools/dns/DnsLookup'), {
+  loading: () => <ToolLoader name="DNS Lookup" />,
+});
+
 const MarkdownConverter = dynamic(() => import('@/components/tools/ai/MarkdownConverter'), {
   loading: () => <ToolLoader name="AI Markdown Converter" />,
 });
@@ -133,7 +137,7 @@ export const tools: Tool[] = [
     category: 'dns',
     icon: Globe,
     keywords: ['whois', 'dns check', 'mx records', 'domain propagation'],
-    component: ComingSoon,
+    component: DnsLookup,
   },
   {
     slug: 'image-optimizer',
