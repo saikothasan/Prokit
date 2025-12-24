@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
+// Define the interfaces locally to match the Cloudflare Images binding API
+// and avoid 'any' types.
+interface ImagesBinding {
+  input(stream: ReadableStream<Uint8Array> | ArrayBuffer): ImageTransformer;
+}
+
+interface ImageTransformer {
+  transform(options: { format?: string }): ImageTransformer;
+  output(options: { format?: string }): Promise<ImageOutput>;
+}
+
+interface ImageOutput {
+  response(): Response;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,9 +28,9 @@ export async function POST(req: NextRequest) {
 
     const { env } = await getCloudflareContext();
 
-    // Check if IMAGES binding exists
-    // We cast to any because the generated types might define it as Fetcher by default
-    const imagesBinding = (env as any).IMAGES;
+    // The IMAGES binding is typed as Fetcher in the generated types, 
+    // but at runtime it is an ImagesBinding. We cast it safely.
+    const imagesBinding = env.IMAGES as unknown as ImagesBinding;
 
     if (!imagesBinding) {
       console.error("IMAGES binding is missing. Ensure 'images' binding is configured in wrangler.jsonc");
@@ -31,7 +45,6 @@ export async function POST(req: NextRequest) {
     const imageInput = imagesBinding.input(arrayBuffer);
     
     // Perform transformation
-    // We request the output in the specified format
     const transformOptions = {
       format: format
     };
@@ -42,7 +55,7 @@ export async function POST(req: NextRequest) {
     const response = output.response();
     const resultBuffer = await response.arrayBuffer();
     
-    // Convert to base64 for the frontend
+    // Convert to base64 for the frontend to display/download
     const base64 = Buffer.from(resultBuffer).toString('base64');
     const mimeType = response.headers.get('content-type') || `image/${format}`;
     const dataUrl = `data:${mimeType};base64,${base64}`;
@@ -55,7 +68,7 @@ export async function POST(req: NextRequest) {
       image: dataUrl
     });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error("Image optimization error:", e);
     const message = e instanceof Error ? e.message : 'An unknown error occurred';
     return NextResponse.json({ error: message }, { status: 500 });
