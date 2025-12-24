@@ -12,6 +12,7 @@ interface SslData {
   fingerprint: string;
   subject: { CN: string };
   issuer: { O: string };
+  error?: string;
 }
 
 export default function SslInspector() {
@@ -28,7 +29,7 @@ export default function SslInspector() {
 
     try {
       const res = await fetch(`/api/ssl-check?host=${encodeURIComponent(domain)}`);
-      const json = await res.json();
+      const json = (await res.json()) as SslData;
       if (json.error) throw new Error(json.error);
       setData(json);
     } catch (err: unknown) {
@@ -65,7 +66,6 @@ export default function SslInspector() {
 
       {data && (
         <div className="grid gap-6 md:grid-cols-2 animate-in fade-in slide-in-from-bottom-4">
-          {/* Status Card */}
           <div className="md:col-span-2 p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className={`p-3 rounded-full ${data.days_remaining > 30 ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
@@ -82,7 +82,6 @@ export default function SslInspector() {
             </div>
           </div>
 
-          {/* Details */}
           <div className="p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 space-y-4">
             <h4 className="font-semibold text-gray-500 uppercase text-xs">Validity</h4>
             <div className="space-y-2 text-sm">
