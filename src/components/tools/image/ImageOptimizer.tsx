@@ -25,7 +25,6 @@ export default function ImageOptimizer() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      // Default to webp, but this could be selectable in the future
       fd.append('format', 'webp');
       
       const res = await fetch('/api/image-optimizer', { method: 'POST', body: fd });
@@ -36,9 +35,10 @@ export default function ImageOptimizer() {
       }
       
       setResult(data);
-    } catch (err: any) {
+    } catch (err: unknown) {
         console.error(err);
-        alert("Error optimizing image: " + err.message);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        alert("Error optimizing image: " + errorMessage);
     } finally {
       setLoading(false);
     }
