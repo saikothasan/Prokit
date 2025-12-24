@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, Loader2, CheckCircle, AlertCircle, CreditCard, Globe, Info } from 'lucide-react';
 
-// 1. Data Interfaces
+// Data Interfaces (kept same)
 interface BinData {
   bin: string;
   brand: string;
@@ -51,107 +51,121 @@ export default function BinChecker() {
       }
 
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred');
-      }
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      {/* --- 1. THE INTERACTIVE TOOL SECTION --- */}
-      <div className="bg-white dark:bg-[#111] rounded-3xl shadow-lg shadow-gray-200/50 dark:shadow-none border border-gray-200 dark:border-gray-800 p-1 mb-10">
-        <div className="bg-gray-50 dark:bg-[#0a0a0a] rounded-[22px] p-6 md:p-10 min-h-[300px] border border-gray-100 dark:border-gray-800/50">
-          
-          <div className="max-w-xl mx-auto">
-            <div className="text-center mb-8">
-               <h3 className="text-xl font-semibold mb-2">Check BIN Details</h3>
-               <p className="text-sm text-gray-500">Enter the first 6 digits of any credit or debit card.</p>
-            </div>
+    <div className="space-y-12">
+      {/* Tool Input Section */}
+      <div className="bg-white dark:bg-[#111] rounded-3xl p-8 border border-gray-200 dark:border-gray-800 shadow-sm">
+        <div className="max-w-2xl mx-auto space-y-8">
+           <div className="text-center space-y-2">
+             <label htmlFor="bin-input" className="text-lg font-medium text-gray-900 dark:text-white">
+               Enter First 6-8 Digits
+             </label>
+             <div className="relative">
+                <input
+                  id="bin-input"
+                  value={bin}
+                  onChange={(e) => setBin(e.target.value)}
+                  placeholder="4532 11..."
+                  maxLength={8}
+                  className="w-full p-5 pl-14 text-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono tracking-wider"
+                />
+                <CreditCard className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6" />
+                <button 
+                  onClick={handleCheck}
+                  disabled={loading || bin.length < 6}
+                  className="absolute right-3 top-2 bottom-2 bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                >
+                  {loading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Check'}
+                </button>
+             </div>
+             <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
+               <Info className="w-3 h-3" /> We do not store or log any card data.
+             </p>
+           </div>
 
-            <div className="flex gap-2 mb-8 relative">
-              <input
-                value={bin}
-                onChange={(e) => setBin(e.target.value)}
-                placeholder="e.g. 453211"
-                maxLength={8}
-                className="flex-1 p-4 pl-5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-black focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-lg"
-              />
-              <button 
-                onClick={handleCheck}
-                disabled={loading || bin.length < 6}
-                className="bg-black dark:bg-white text-white dark:text-black px-8 rounded-xl font-medium disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2"
-              >
-                {loading ? <Loader2 className="animate-spin" /> : <Search className="w-5 h-5" />}
-                Check
-              </button>
-            </div>
+           {error && (
+             <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 border border-red-100 dark:border-red-900/20 animate-in fade-in slide-in-from-top-2">
+               <AlertCircle className="w-5 h-5" /> {error}
+             </div>
+           )}
 
-            {error && (
-               <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 border border-red-100 dark:border-red-900/20">
-                 <AlertCircle className="w-5 h-5" /> {error}
-               </div>
-            )}
-
-            {data && (
-              <div className="grid grid-cols-2 gap-4 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <ResultItem label="Brand" value={data.brand} />
-                <ResultItem label="Type" value={data.type} />
-                <ResultItem label="Category" value={data.category} />
-                <ResultItem label="Issuer" value={data.issuer} />
-                <ResultItem label="Country" value={data.country.name} />
-                <ResultItem label="ISO Code" value={data.country.iso2} />
-              </div>
-            )}
-          </div>
-
+           {data && (
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-in fade-in slide-in-from-bottom-4">
+               <ResultItem label="Card Brand" value={data.brand} icon={<CreditCard className="w-4 h-4" />} />
+               <ResultItem label="Type" value={data.type} />
+               <ResultItem label="Category" value={data.category} />
+               <ResultItem label="Issuing Bank" value={data.issuer} />
+               <ResultItem label="Country" value={data.country.name} icon={<Globe className="w-4 h-4" />} />
+               <ResultItem label="ISO Code" value={data.country.iso2} />
+             </div>
+           )}
         </div>
       </div>
 
-      {/* --- 2. THE OWN SEO CONTENT SECTION --- */}
-      <article className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-[#111] p-8 md:p-12 rounded-3xl border border-gray-100 dark:border-gray-800">
-        <h2>About BIN Checker</h2>
-        <p>
-          This <strong>Bank Identification Number (BIN) Checker</strong> is a professional utility designed to help merchants, 
-          developers, and security professionals instantly validate credit and debit card information.
-        </p>
-        
-        <h3>How it works</h3>
-        <p>
-          Every payment card contains a unique sequence of numbers. The first 6 to 8 digits (known as the IIN or BIN) 
-          identify the issuing bank and the type of card. Our tool queries a massive, real-time database to return precise details.
-        </p>
+      {/* SEO Content Section */}
+      <article className="prose prose-lg dark:prose-invert max-w-none">
+        <div className="bg-gray-50 dark:bg-[#111] p-8 md:p-12 rounded-3xl border border-gray-100 dark:border-gray-800 space-y-8">
+          <div>
+            <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Comprehensive BIN/IIN Lookup</h2>
+            <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+              Our <strong>Bank Identification Number (BIN) Checker</strong> provides instant, accurate data on credit and debit cards. 
+              Also known as the Issuer Identification Number (IIN), the first 6 to 8 digits of a card number reveal critical 
+              information about the issuing bank, card type, and geographical origin.
+            </p>
+          </div>
 
-        <h3>Why use ProKit BIN Checker?</h3>
-        <ul>
-          <li><strong>Fraud Prevention:</strong> Confirm if the card&apos;s country matches the customer&apos;s billing address.</li>
-          <li><strong>Payment Optimization:</strong> Determine if a card is Prepaid, Debit, or Credit to route payments correctly.</li>
-          <li><strong>Issuer Identification:</strong> Instantly find the bank name and contact details.</li>
-        </ul>
+          <div className="grid md:grid-cols-3 gap-8">
+            <FeatureBox title="Fraud Prevention" desc="Verify if the card's country matches the user's IP or shipping address." />
+            <FeatureBox title="Payment Routing" desc="Detect Prepaid vs. Credit cards to optimize processing fees." />
+            <FeatureBox title="User Validation" desc="Auto-fill bank names and card brands to improve UX." />
+          </div>
 
-        <div className="not-prose bg-blue-50 dark:bg-blue-900/20 p-6 rounded-2xl border border-blue-100 dark:border-blue-800 my-8">
-           <h4 className="flex items-center gap-2 font-bold text-blue-700 dark:text-blue-300 mb-2">
-             <CheckCircle className="w-5 h-5" /> Privacy Guarantee
-           </h4>
-           <p className="text-sm text-blue-800 dark:text-blue-200">
-             We do not store or log any card numbers you enter. All lookups are processed anonymously via our secure edge network.
-           </p>
+          <div className="space-y-4">
+            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">Frequently Asked Questions</h3>
+            <div className="space-y-4">
+              <FaqItem q="Is this tool safe?" a="Yes. We only process the first 6-8 digits (public BIN data). We never ask for, store, or process full card numbers or CVV codes." />
+              <FaqItem q="What is a BIN?" a="A Bank Identification Number (BIN) is the initial sequence of numbers on a payment card that identifies the issuing institution." />
+              <FaqItem q="How accurate is the data?" a="We update our database weekly, aggregating data from major card networks and financial registries." />
+            </div>
+          </div>
         </div>
       </article>
-    </>
+    </div>
   );
 }
 
-function ResultItem({ label, value }: { label: string; value: string }) {
+function ResultItem({ label, value, icon }: { label: string; value: string, icon?: React.ReactNode }) {
   if (!value) return null;
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
-      <div className="text-gray-500 uppercase text-[10px] tracking-wider font-bold mb-1">{label}</div>
-      <div className="font-mono font-medium text-gray-900 dark:text-gray-100 truncate" title={value}>{value}</div>
+    <div className="p-4 bg-white dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-blue-500/50 transition-colors">
+      <div className="flex items-center gap-2 text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">
+        {icon} {label}
+      </div>
+      <div className="font-mono font-medium text-lg text-gray-900 dark:text-gray-100 truncate" title={value}>{value}</div>
+    </div>
+  );
+}
+
+function FeatureBox({ title, desc }: { title: string, desc: string }) {
+  return (
+    <div className="bg-white dark:bg-black p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+      <h4 className="font-bold text-lg mb-2 text-gray-900 dark:text-white">{title}</h4>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{desc}</p>
+    </div>
+  );
+}
+
+function FaqItem({ q, a }: { q: string, a: string }) {
+  return (
+    <div className="border-b border-gray-200 dark:border-gray-800 pb-4 last:border-0">
+      <h5 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{q}</h5>
+      <p className="text-gray-600 dark:text-gray-400 text-sm">{a}</p>
     </div>
   );
 }
