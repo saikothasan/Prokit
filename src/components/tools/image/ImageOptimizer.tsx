@@ -1,11 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { Upload, Image as ImageIcon, Download, ArrowRight } from 'lucide-react';
+import { Upload, Download, ArrowRight } from 'lucide-react';
+
+// Define the type for the result
+interface OptimizationResult {
+  originalSize: number;
+  optimizedSize: number;
+  success: boolean;
+  format: string;
+}
 
 export default function ImageOptimizer() {
   const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<OptimizationResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleUpload = async () => {
