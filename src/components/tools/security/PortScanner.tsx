@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Activity, Server, Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
+
+interface PortResult {
+  port: number;
+  status: 'open' | 'closed';
+  service: string;
+}
 
 export default function PortScanner() {
   const [host, setHost] = useState('');
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<PortResult[]>([]);
   const [loading, setLoading] = useState(false);
 
   const scan = async (e: React.FormEvent) => {
