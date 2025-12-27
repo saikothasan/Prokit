@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HttpsProxyAgent } from 'https-proxy-agent';
-import { fetch } from 'next/dist/compiled/@edge-runtime/primitives'; // or global fetch
+import * as net from 'node:net';
+import * as tls from 'node:tls';
 
-// Use Node.js compatibility mode for NPM libraries
+// FIX: Use 'nodejs' runtime to access node:net/tls via Cloudflare's nodejs_compat layer
 //export const runtime = 'nodejs';
 
 interface ProxyCheckBody {
@@ -22,35 +23,37 @@ export async function POST(req: NextRequest) {
     const results = await Promise.all(
       proxies.map(async (proxyStr) => {
         const start = Date.now();
-        // Ensure protocol exists (default to http)
-        const formattedProxy = proxyStr.startsWith('http') ? proxyStr : `http://${proxyStr}`;
+        // Standardize protocol
+        const formattedProxy = proxyStr.includes('://') ? proxyStr : `http://${proxyStr}`;
 
         try {
-          // Create an agent for this specific proxy
+          // 1. Create the Agent
+          // This uses 'node:net' which is supported in nodejs_compat
           const agent = new HttpsProxyAgent(formattedProxy);
-          
-          // Controller to handle timeout
+
+          // 2. Perform a check using the global fetch with the agent
+          // We use a lightweight target (Google Gen 204)
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-          // Attempt to fetch a reliable, small endpoint (Google or similar)
           const response = await fetch('https://www.google.com/generate_204', {
-            agent: agent as any, // Type cast for Next.js fetch compatibility
-            signal: controller.signal,
-            method: 'HEAD' // Lightweight request
+            method: 'HEAD',
+            // @ts-ignore - Next.js fetch types don't officially support 'agent' but the runtime does
+            agent: agent, 
+            signal: controller.signal
           });
 
           clearTimeout(timeoutId);
 
           if (response.ok || response.status === 204) {
-             return { 
+            return { 
               proxy: proxyStr, 
               status: 'Active', 
               latency: Date.now() - start, 
               healthy: true 
             };
           } else {
-             throw new Error(`Status ${response.status}`);
+             throw new Error(`Status: ${response.status}`);
           }
 
         } catch (error) {
