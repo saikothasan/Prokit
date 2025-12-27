@@ -1,10 +1,14 @@
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
-// Initialize OpenNext for Cloudflare dev environment
-initOpenNextCloudflareForDev();
+// FIX: Only initialize the Cloudflare proxy in local development mode.
+// This prevents the "Address already in use" and "deadlock" errors during 'next build'.
+if (process.env.NODE_ENV === "development") {
+  initOpenNextCloudflareForDev();
+}
 
 const nextConfig: NextConfig = {
+  // Prevent bundling these packages to avoid "cloudflare:workers" resolution errors
   serverExternalPackages: ["@cloudflare/puppeteer", "@cloudflare/playwright"],
 
   images: {
