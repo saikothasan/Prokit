@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
-import { launch } from '@cloudflare/playwright';
+import puppeteer from '@cloudflare/puppeteer';
 
 // R2 Domain Configuration
 const R2_CUSTOM_DOMAIN = 'https://c.prokit.uk'; 
@@ -21,25 +21,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Browser or Storage binding not configured.' }, { status: 500 });
     }
 
-    // 1. Launch Browser
-    browser = await launch(env.MY_BROWSER);
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    // 1. Launch Browser (Puppeteer)
+    browser = await puppeteer.launch(env.MY_BROWSER);
+    const page = await browser.newPage();
     
     // 2. Capture Console Logs
     // Using explicit types for the log accumulator
     const consoleLogs: { type: string; text: string; location: string }[] = [];
     page.on('console', msg => {
+      const location = msg.location();
       consoleLogs.push({
         type: msg.type(),
         text: msg.text(),
-        location: msg.location().url
+        location: location ? location.url || 'unknown' : 'unknown'
       });
     });
 
     // 3. Navigate & Wait
     const startTime = Date.now();
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    // Puppeteer uses 'networkidle0' (no connections for 500ms) or 'networkidle2' (max 2 connections)
+    await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
     const endTime = Date.now();
 
     // 4. Collect Metrics via Page Evaluation
@@ -69,7 +70,8 @@ export async function POST(req: NextRequest) {
 
     // 6. Upload to R2
     const testId = crypto.randomUUID();
-    const screenshotKey = `playwright/${testId}/screenshot.png`;
+    // Changed folder to 'puppeteer' to reflect the tool used
+    const screenshotKey = `puppeteer/${testId}/screenshot.png`;
 
     await env.MY_FILES.put(screenshotKey, screenshotBuffer, {
       httpMetadata: { contentType: 'image/png' }
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error: unknown) {
     if (browser) await browser.close();
-    console.error('Playwright Error:', error);
+    console.error('Puppeteer Error:', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
   }
