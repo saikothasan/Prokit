@@ -27,6 +27,10 @@ const SslInspector = dynamic(() => import('@/components/tools/security/SslInspec
   loading: () => <ToolLoader name="SSL Inspector" />,
 });
 
+const TestAgent = dynamic(() => import('@/components/tools/browser/TestAgent'), {
+  loading: () => <ToolLoader name="Website Testing Agent" />,
+});
+
 const PortScanner = dynamic(() => import('@/components/tools/security/PortScanner'), {
   loading: () => <ToolLoader name="Port Scanner" />,
 });
@@ -109,6 +113,15 @@ export const tools: Tool[] = [
     icon: ShieldCheck,
     keywords: ['ssl', 'cert', 'https', 'security', 'tls', 'inspector'],
     component: SslInspector,
+  },
+	{
+    slug: 'web-agent',
+    name: 'Website Testing Agent',
+    description: 'Run deep diagnostic performance tests (LCP, CLS, TTFB) across different browsers.',
+    category: 'image',
+    icon: Globe,
+    keywords: ['telescope', 'browser test', 'performance', 'lcp', 'metrics', 'agent'],
+    component: TestAgent,
   },
   {
     slug: 'port-scanner',
