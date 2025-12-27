@@ -6,6 +6,11 @@ initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["@cloudflare/puppeteer"],
+
+  images: {
+    loader: "custom",
+    loaderFile: "./image-loader.ts",
+  },
   
   // Security Headers
   async headers() {
