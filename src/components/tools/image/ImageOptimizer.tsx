@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Upload, Download, ArrowRight, Settings, Image as ImageIcon, RefreshCw, Check } from 'lucide-react';
-import Image from 'next/image';
+import { useState } from 'react';
+import { Upload, Download, ArrowRight, Settings, Image as ImageIcon, RefreshCw } from 'lucide-react';
+// Check and useCallback were unused and removed
 
 interface OptimizationResult {
   originalSize: number;
@@ -249,20 +249,23 @@ export default function ImageOptimizer() {
                         <div className="space-y-2">
                              <p className="text-center text-sm font-medium text-gray-500">Original</p>
                              <div className="relative aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                                <Image src={preview} alt="Original" className="object-contain w-full h-full" />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={preview} alt="Original" className="object-contain w-full h-full" />
                              </div>
                         </div>
                         <div className="space-y-2">
                              <p className="text-center text-sm font-medium text-green-600">Optimized ({result.format.toUpperCase()})</p>
                              <div className="relative aspect-video bg-gray-200 dark:bg-gray-800 rounded-xl overflow-hidden border-2 border-green-500/30">
-                                <Image src={result.image} alt="Optimized" className="object-contain w-full h-full" />
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={result.image} alt="Optimized" className="object-contain w-full h-full" />
                              </div>
                         </div>
                     </div>
                  </div>
                ) : (
                  <div className="relative w-full max-w-md aspect-square md:aspect-video bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
-                    <Image 
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
                       src={preview} 
                       alt="Preview" 
                       className="w-full h-full object-contain p-4 transition-opacity opacity-100 group-hover:opacity-90" 
