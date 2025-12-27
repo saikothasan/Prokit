@@ -1,5 +1,6 @@
 import { getAllPosts } from '@/lib/blog';
 import Link from 'next/link';
+import Image from 'next/image'; // Import Image
 import { Metadata } from 'next';
 import { Calendar, ArrowRight } from 'lucide-react';
 
@@ -35,10 +36,11 @@ export default function BlogIndex() {
             >
               {post.image && (
                 <div className="h-48 overflow-hidden relative group">
-                  <img
+                  <Image
                     src={post.image}
                     alt={post.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                 </div>
               )}
