@@ -14,6 +14,7 @@ export interface Post {
   categories?: string[];
   tags?: string[];
   content: string;
+  readingTime: string; // Added missing field
 }
 
 export function getPostSlugs() {
@@ -31,6 +32,11 @@ export function getPostBySlug(slug: string): Post {
   // Parse metadata section
   const { data, content } = matter(fileContents);
 
+  // Calculate reading time (approx 200 words per minute)
+  const words = content.trim().split(/\s+/).length;
+  const readTimeMinutes = Math.ceil(words / 200);
+  const readingTime = `${readTimeMinutes} min read`;
+
   return {
     slug: realSlug,
     title: data.title,
@@ -41,6 +47,7 @@ export function getPostBySlug(slug: string): Post {
     categories: data.categories || [],
     tags: data.tags || [],
     content,
+    readingTime, // Return the calculated value
   };
 }
 
