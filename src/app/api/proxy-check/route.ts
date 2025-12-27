@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-// @ts-expect-error - Cloudflare Sockets types are not standard in Node environment
 import { connect } from 'cloudflare:sockets';
 
+// export const runtime = 'edge';
 
 // Define the expected request body structure
 interface ProxyCheckBody {
