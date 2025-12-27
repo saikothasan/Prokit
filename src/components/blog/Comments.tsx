@@ -8,16 +8,16 @@ export function Comments() {
       <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Comments</h3>
       <Giscus
         id="comments"
-        repo="saikothasan/prokit" // REPLACE WITH YOUR REPO
-        repoId="R_kgDON..."      // REPLACE WITH YOUR REPO ID
-        category="Announcements"
-        categoryId="DIC_kwDON..." // REPLACE WITH YOUR CATEGORY ID
+        repo="saikothasan/Prokit" // REPLACE WITH YOUR REPO
+        repoId="R_kgDOQqf2uw"      // REPLACE WITH YOUR REPO ID
+        category="Q&A"
+        categoryId="DIC_kwDOQqf2u84C0St2" // REPLACE WITH YOUR CATEGORY ID
         mapping="pathname"
         strict="0"
         reactionsEnabled="1"
         emitMetadata="0"
         inputPosition="top"
-        theme="preferred_color_scheme"
+        theme="light_tritanopia"
         lang="en"
         loading="lazy"
       />
