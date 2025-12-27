@@ -17,7 +17,7 @@
 		/* Production Safety & Best Practices */
 		"noUncheckedIndexedAccess": true,
 		"forceConsistentCasingInFileNames": true,
-		"verbatimModuleSyntax": true,
+		"verbatimModuleSyntax": false,
 
 		"plugins": [
 			{
