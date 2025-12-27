@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Cpu, Menu, X, Github, Terminal, Activity } from 'lucide-react';
+import { Cpu, Menu, X, Github, Terminal } from 'lucide-react';
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -129,7 +129,7 @@ function MobileLink({ href, children, onClick, index }: { href: string; children
       onClick={onClick}
       className="flex items-center gap-4 p-3 hover:bg-[var(--muted)] transition-colors"
     >
-      <span className="text-[var(--muted-foreground)] text-xs">{index} //</span>
+      <span className="text-[var(--muted-foreground)] text-xs">{index} {`//`}</span>
       <span className="font-medium text-[var(--foreground)] uppercase">{children}</span>
     </Link>
   );
