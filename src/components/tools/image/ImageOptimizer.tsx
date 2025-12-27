@@ -262,7 +262,7 @@ export default function ImageOptimizer() {
                  </div>
                ) : (
                  <div className="relative w-full max-w-md aspect-square md:aspect-video bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden group">
-                    <img 
+                    <Image 
                       src={preview} 
                       alt="Preview" 
                       className="w-full h-full object-contain p-4 transition-opacity opacity-100 group-hover:opacity-90" 
