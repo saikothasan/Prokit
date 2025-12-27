@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* In Tailwind v4, plugins are registered directly in CSS.
+  We are enabling the typography plugin here.
+*/
+@plugin "@tailwindcss/typography";
+@plugin "@tailwindcss/forms";
+@plugin "@tailwindcss/aspect-ratio";
+
 :root {
 	--background: #ffffff;
 	--foreground: #171717;
@@ -11,11 +18,11 @@
 	--font-sans: var(--font-geist-sans);
 	--font-mono: var(--font-geist-mono);
 
-	/* Custom Breakpoint Example (Tailwind v4) */
+	/* Custom Breakpoint Example */
 	--breakpoint-3xl: 120rem; /* 1920px */
 }
 
-/* Custom Container Utility for Responsive Design */
+/* Custom Container Utility */
 @utility container {
 	margin-inline: auto;
 	padding-inline: 1rem;
