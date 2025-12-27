@@ -19,6 +19,7 @@
 		"@cloudflare/containers": "latest",
 		"@next/third-parties": "latest",
 		"@giscus/react": "latest",
+    "@cloudflare/telescope": "latest",
 		"@mistralai/mistralai": "latest",
 		"@giscus/react": "latest",
 		"@deepgram/sdk": "latest",
