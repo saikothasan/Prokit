@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getTool, getToolsByCategory, tools } from '@/lib/tools-config';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { ChevronRight, Home, ShieldCheck, Send, Zap, Star } from 'lucide-react';
 
 type Props = {
