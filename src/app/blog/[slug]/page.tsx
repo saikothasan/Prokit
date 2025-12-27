@@ -4,7 +4,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { Components } from 'react-markdown';
 
 // Icons
 import { ArrowLeft, Calendar, Tag, Clock, Share2 } from 'lucide-react';
@@ -59,13 +59,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 // 3. Custom Markdown Components Configuration
-const MarkdownComponents: any = {
+// We define specific types for the custom code component props
+type CodeProps = React.ComponentPropsWithoutRef<'code'> & {
+  inline?: boolean;
+};
+
+const MarkdownComponents: Components = {
   // Enhanced Code Blocks with Copy Button & Syntax Highlighting
-  code: ({ node, inline, className, children, ...props }: any) => {
+  code: ({ className, children, ...props }: CodeProps) => {
+    // Note: 'node' was unused and removed to satisfy linter
     const match = /language-(\w+)/.exec(className || '');
     const codeContent = String(children).replace(/\n$/, '');
+    const isInline = props.inline || false;
 
-    if (!inline && match) {
+    if (!isInline && match) {
       return (
         <CodeBlock 
           language={match[1]} 
@@ -85,7 +92,7 @@ const MarkdownComponents: any = {
   },
 
   // Smart Links: Handles Video/Audio files and YouTube embeds automatically
-  a: ({ href, children }: { href: string; children: React.ReactNode }) => {
+  a: ({ href, children }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
     if (!href) return null;
 
     // A. Internal Links
@@ -139,16 +146,17 @@ const MarkdownComponents: any = {
   },
 
   // Enhanced Image Rendering
-  img: ({ src, alt }: { src: string; alt: string }) => {
+  // Note: Using standard <img> tag for arbitrary external URLs to avoid Next.js Config domain whitelisting issues.
+  // Next.js warns about this, but it is intentional for a general Markdown renderer.
+  img: ({ src, alt }: React.ImgHTMLAttributes<HTMLImageElement>) => {
     if (!src) return null;
     return (
       <figure className="my-10 group">
         <div className="relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 shadow-sm">
-          {/* We use standard img for arbitrary remote URLs to avoid Next.js Config whitelisting issues, 
-              but you can switch to <Image> if domains are known */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={src} 
-            alt={alt} 
+            alt={alt || ''} 
             className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.02]"
             loading="lazy"
           />
@@ -163,38 +171,38 @@ const MarkdownComponents: any = {
   },
 
   // Stylish Blockquotes (OpenAI Style)
-  blockquote: ({ children }: { children: React.ReactNode }) => (
+  blockquote: ({ children }: React.BlockquoteHTMLAttributes<HTMLQuoteElement>) => (
     <blockquote className="border-l-4 border-blue-500 pl-6 py-1 my-8 text-xl font-medium italic text-gray-900 dark:text-gray-100 bg-transparent">
       {children}
     </blockquote>
   ),
 
   // Cleaner Headings
-  h2: ({ children }: { children: React.ReactNode }) => (
+  h2: ({ children }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h2 className="text-3xl font-bold mt-16 mb-6 tracking-tight text-gray-900 dark:text-gray-50">
       {children}
     </h2>
   ),
-  h3: ({ children }: { children: React.ReactNode }) => (
+  h3: ({ children }: React.HTMLAttributes<HTMLHeadingElement>) => (
     <h3 className="text-2xl font-bold mt-12 mb-4 tracking-tight text-gray-900 dark:text-gray-100">
       {children}
     </h3>
   ),
   
   // Lists
-  ul: ({ children }: { children: React.ReactNode }) => (
+  ul: ({ children }: React.HTMLAttributes<HTMLUListElement>) => (
     <ul className="list-disc list-outside ml-6 space-y-2 mb-6 text-gray-700 dark:text-gray-300 marker:text-gray-400">
       {children}
     </ul>
   ),
-  ol: ({ children }: { children: React.ReactNode }) => (
+  ol: ({ children }: React.HTMLAttributes<HTMLOListElement>) => (
     <ol className="list-decimal list-outside ml-6 space-y-2 mb-6 text-gray-700 dark:text-gray-300 marker:font-bold marker:text-gray-500">
       {children}
     </ol>
   ),
   
   // Paragraphs
-  p: ({ children }: { children: React.ReactNode }) => (
+  p: ({ children }: React.HTMLAttributes<HTMLParagraphElement>) => (
     <p className="mb-6 leading-relaxed text-gray-700 dark:text-gray-300 text-lg">
       {children}
     </p>
@@ -215,8 +223,6 @@ export default async function BlogPost({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-white dark:bg-black">
-      {/* Progress Bar (Optional - could be added here) */}
-      
       <main className="container mx-auto px-4 py-12 md:py-20 max-w-3xl">
         
         {/* Navigation */}
@@ -259,14 +265,6 @@ export default async function BlogPost({ params }: Props) {
               <Clock className="w-4 h-4 mr-2 text-gray-400" />
               {post.readingTime || '5 min read'}
             </div>
-
-            {/* Placeholder for Author if you add it to frontmatter */}
-            {/* <div className="flex items-center gap-2">
-               <div className="w-6 h-6 rounded-full bg-gray-200 overflow-hidden">
-                 <img src="/avatar.jpg" alt="Author" /> 
-               </div>
-               <span>ProKit Team</span>
-            </div> */}
           </div>
         </header>
 
