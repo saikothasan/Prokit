@@ -7,7 +7,6 @@ import {
   Layout, FileSearch
 } from 'lucide-react';
 
-// Defines the exact shape of the API response to avoid 'any'
 interface TestResult {
   success: boolean;
   testId: string;
@@ -24,6 +23,11 @@ interface TestResult {
     };
     console: { type: string; text: string; location?: string }[];
   };
+}
+
+// Define an interface for the error response
+interface ErrorResponse {
+  error?: string;
 }
 
 export default function TestAgent() {
@@ -49,11 +53,13 @@ export default function TestAgent() {
         body: JSON.stringify({ url: targetUrl }),
       });
 
-      // FIX: Cast directly to 'any' or an intersection type to allow access to .error
-      const data = (await res.json()) as any;
+      // FIX: Use 'unknown' type instead of 'any' to satisfy ESLint.
+      const data = await res.json() as unknown;
       
       if (!res.ok) {
-        throw new Error(data.error || 'Test failed');
+        // Safe cast to access the error property
+        const errorData = data as ErrorResponse;
+        throw new Error(errorData.error || 'Test failed');
       }
       
       setResult(data as TestResult);
