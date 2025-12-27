@@ -17,12 +17,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { env } = getCloudflareContext();
-    if (!env.BROWSER || !env.MY_FILES) {
+    if (!env.MY_BROWSER || !env.MY_FILES) {
       return NextResponse.json({ error: 'Browser or Storage binding not configured.' }, { status: 500 });
     }
 
     // 1. Launch Browser
-    browser = await launch(env.BROWSER);
+    browser = await launch(env.MY_BROWSER);
     const context = await browser.newContext();
     const page = await context.newPage();
     
