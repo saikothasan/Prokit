@@ -9,7 +9,7 @@ if (process.env.NODE_ENV === "development") {
 
 const nextConfig: NextConfig = {
   // Prevent bundling these packages to avoid "cloudflare:workers" resolution errors
-  serverExternalPackages: ["@cloudflare/puppeteer", "@cloudflare/playwright"],
+  serverExternalPackages: ["@cloudflare/puppeteer"],
 
   images: {
     loader: "custom",
