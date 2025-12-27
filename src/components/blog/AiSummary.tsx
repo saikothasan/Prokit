@@ -3,6 +3,13 @@
 import { useState } from 'react';
 import { Sparkles, Bot } from 'lucide-react';
 
+// Define the expected API response shape
+interface SummaryResponse {
+  success: boolean;
+  data: string;
+  error?: string;
+}
+
 export function AiSummary({ content }: { content: string }) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -15,7 +22,10 @@ export function AiSummary({ content }: { content: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),
       });
-      const json = await res.json();
+      
+      // Fix: Cast the response to the interface
+      const json = (await res.json()) as SummaryResponse;
+      
       if (json.success) {
         setSummary(json.data);
       }
@@ -36,7 +46,7 @@ export function AiSummary({ content }: { content: string }) {
         {!summary && !loading && (
           <button
             onClick={handleSummarize}
-            className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full transition-colors flex items-center gap-1"
+            className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full transition-colors flex items-center gap-1 cursor-pointer"
           >
             <Bot className="w-3 h-3" />
             Generate Summary
