@@ -32,10 +32,14 @@ export default function CurlTool() {
 
   const addHeader = () => setReqHeaders([...reqHeaders, { key: '', value: '' }]);
   const removeHeader = (index: number) => setReqHeaders(reqHeaders.filter((_, i) => i !== index));
+  
   const updateHeader = (index: number, field: 'key' | 'value', val: string) => {
     const newHeaders = [...reqHeaders];
-    newHeaders[index][field] = val;
-    setReqHeaders(newHeaders);
+    // FIX: Ensure the item exists before assignment to satisfy TypeScript
+    if (newHeaders[index]) {
+      newHeaders[index][field] = val;
+      setReqHeaders(newHeaders);
+    }
   };
 
   // Generate the actual curl command string for display
