@@ -1,116 +1,136 @@
 import Link from 'next/link';
-import { Cpu, Github, Send, Twitter, Heart } from 'lucide-react';
+import { Cpu, Github, Send, ArrowUpRight, ShieldCheck, Activity, Globe } from 'lucide-react';
 
 export function Footer() {
   return (
-    <footer className="relative border-t border-gray-200/60 dark:border-gray-800 bg-white dark:bg-[#050505] pt-16 pb-8 overflow-hidden">
+    <footer className="relative border-t border-[var(--border)] bg-[var(--background)] overflow-hidden">
       
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+      {/* Visual Pattern Overlay (Halftone) */}
+      <div className="absolute inset-0 bg-halftone opacity-[0.05] pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
+      <div className="max-w-[1400px] mx-auto">
         
-        {/* Top Section: Brand & Newsletter */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
-          <div className="lg:col-span-5 space-y-6">
-            <Link href="/" className="flex items-center gap-2.5 font-bold text-xl tracking-tight">
-              <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-600 text-white">
-                <Cpu size={18} />
+        {/* Top Section: Grid Layout */}
+        <div className="grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-[var(--border)]">
+          
+          {/* Brand Column */}
+          <div className="p-8 md:p-12 space-y-6">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-6 h-6 rounded-sm bg-[var(--foreground)] text-[var(--background)]">
+                <Cpu size={14} />
               </div>
-              <span className="text-gray-900 dark:text-white">
-                ProKit<span className="text-blue-600 dark:text-blue-400">.uk</span>
+              <span className="font-bold text-sm tracking-tight text-[var(--foreground)]">
+                PROKIT.UK
               </span>
             </Link>
-            <p className="text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
-              Professional developer tools running on the Edge. 
-              Open Source, privacy-focused, and blazing fast.
+            <p className="text-sm text-[var(--muted-foreground)] leading-relaxed font-mono">
+              Advanced utility infrastructure for the modern web. 
+              Running on Edge Runtime.
             </p>
-            
-            {/* Social Links */}
-            <div className="flex items-center gap-4">
-              <SocialLink href="https://t.me/drkingbd" icon={<Send size={18} />} label="Telegram" />
-              <SocialLink href="https://github.com/saikothasan/Prokit" icon={<Github size={18} />} label="GitHub" />
-              <SocialLink href="#" icon={<Twitter size={18} />} label="Twitter" />
+            <div className="flex gap-4">
+              <SocialIcon href="https://github.com/saikothasan/Prokit" icon={<Github size={16} />} />
+              <SocialIcon href="https://t.me/drkingbd" icon={<Send size={16} />} />
             </div>
           </div>
 
-          {/* Links Grid */}
-          <div className="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-8">
-            <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Tools</h4>
-              <ul className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
-                <li><FooterLink href="/tool/bin-checker">BIN Checker</FooterLink></li>
-                <li><FooterLink href="/tool/ai-translator">AI Translator</FooterLink></li>
-                <li><FooterLink href="/tool/dns-lookup">DNS Lookup</FooterLink></li>
-                <li><FooterLink href="/tool/image-optimizer">Image Tools</FooterLink></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Resources</h4>
-              <ul className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
-                <li><FooterLink href="/blog">Developer Blog</FooterLink></li>
-                <li><FooterLink href="/api-docs">API Documentation</FooterLink></li>
-                <li><FooterLink href="/status">System Status</FooterLink></li>
-              </ul>
-            </div>
+          {/* Tools Index */}
+          <div className="p-8 md:p-12">
+            <h4 className="font-mono text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-6">
+              // Core_Modules
+            </h4>
+            <ul className="space-y-3">
+              <FooterLink href="/tool/bin-checker" code="SEC-01">BIN Inspector</FooterLink>
+              <FooterLink href="/tool/ai-translator" code="AI-02">Neural Translate</FooterLink>
+              <FooterLink href="/tool/dns-lookup" code="DNS-05">DNS Propagation</FooterLink>
+              <FooterLink href="/tool/image-optimizer" code="IMG-09">Media Optimize</FooterLink>
+            </ul>
+          </div>
+          
+          {/* Resources Index */}
+          <div className="p-8 md:p-12">
+            <h4 className="font-mono text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-6">
+              // Documentation
+            </h4>
+            <ul className="space-y-3">
+              <FooterLink href="/blog" code="DOC-01">Engineering Blog</FooterLink>
+              <FooterLink href="/api-docs" code="API-00">API Reference</FooterLink>
+              <FooterLink href="/status" code="SYS-STAT">System Status</FooterLink>
+            </ul>
+          </div>
 
-            <div>
-              <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Legal</h4>
-              <ul className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
-                <li><FooterLink href="/privacy">Privacy Policy</FooterLink></li>
-                <li><FooterLink href="/terms">Terms of Service</FooterLink></li>
-                <li><FooterLink href="/cookies">Cookie Policy</FooterLink></li>
-              </ul>
-            </div>
+          {/* Legal / Compliance */}
+          <div className="p-8 md:p-12">
+            <h4 className="font-mono text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-6">
+              // Compliance
+            </h4>
+            <ul className="space-y-3">
+              <FooterLink href="/privacy" code="LEG-01">Privacy Protocol</FooterLink>
+              <FooterLink href="/terms" code="LEG-02">Terms of Use</FooterLink>
+            </ul>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="pt-8 border-t border-gray-100 dark:border-gray-800 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-500 dark:text-gray-500">
-            © {new Date().getFullYear()} ProKit.uk. All rights reserved.
-          </p>
+        {/* Bottom System Bar */}
+        <div className="border-t border-[var(--border)] bg-[var(--muted)]/50 px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] font-mono uppercase tracking-wide text-[var(--muted-foreground)]">
           
-          <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-500">
-            <span>Made with</span>
-            <Heart size={14} className="text-red-500 fill-red-500" />
-            <span>by</span>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <ShieldCheck size={12} />
+              <span>SECURE CONNECTION</span>
+            </div>
+            <div className="hidden md:flex items-center gap-2">
+              <Globe size={12} />
+              <span>REGION: GLOBAL_EDGE</span>
+            </div>
+            <div className="hidden md:flex items-center gap-2">
+              <Activity size={12} />
+              <span>UPTIME: 99.99%</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <span>© {new Date().getFullYear()} PROKIT SYSTEMS. ENGINEERED BY</span>
             <a 
               href="https://t.me/drkingbd" 
               target="_blank" 
-              className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              className="text-[var(--foreground)] hover:underline decoration-1 underline-offset-2"
             >
-              DrKingBD
+              DRKINGBD
             </a>
           </div>
         </div>
+
       </div>
     </footer>
   );
 }
 
-// Helper Components
-function SocialLink({ href, icon, label }: { href: string; icon: React.ReactNode; label: string }) {
+// Sub-components
+function SocialIcon({ href, icon }: { href: string; icon: React.ReactNode }) {
   return (
     <Link 
       href={href} 
       target="_blank"
-      className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-600 dark:hover:text-blue-400 transition-all hover:scale-105"
-      aria-label={label}
+      className="p-2 border border-[var(--border)] text-[var(--muted-foreground)] hover:border-[var(--foreground)] hover:text-[var(--foreground)] hover:bg-[var(--background)] transition-all"
     >
       {icon}
     </Link>
   );
 }
 
-function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+function FooterLink({ href, children, code }: { href: string; children: React.ReactNode; code: string }) {
   return (
     <Link 
       href={href} 
-      className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors block"
+      className="group flex items-center justify-between text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
     >
-      {children}
+      <span className="flex items-center gap-3">
+        <span className="text-[10px] font-mono text-[var(--border)] group-hover:text-blue-500 transition-colors">
+          {code}
+        </span>
+        {children}
+      </span>
+      <ArrowUpRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
     </Link>
   );
 }
