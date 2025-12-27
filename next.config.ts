@@ -5,7 +5,7 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@cloudflare/puppeteer"],
+  serverExternalPackages: ["@cloudflare/puppeteer", "@cloudflare/playwright"],
 
   images: {
     loader: "custom",
