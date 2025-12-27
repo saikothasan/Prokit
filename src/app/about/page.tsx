@@ -1,6 +1,6 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { Shield, Zap, Globe } from 'lucide-react';
-import React from 'react'; // Ensure React is imported for types
+import React from 'react'; 
 
 export const metadata: Metadata = {
   title: 'About ProKit',
@@ -36,7 +36,6 @@ export default function AboutPage() {
   );
 }
 
-// FIX: Use 'React.ReactNode' instead of 'any'
 function Feature({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
   return (
     <div className="p-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
