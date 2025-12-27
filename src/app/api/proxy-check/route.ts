@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connect } from 'cloudflare:sockets';
 
-export const runtime = 'edge';
-
 export async function POST(req: NextRequest) {
   try {
     const { proxies, timeout = 3000 } = await req.json();
