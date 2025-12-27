@@ -17,7 +17,7 @@
 		"@cloudflare/ai-utils": "latest",
 		"@next/third-parties": "latest",
 		"@cloudflare/ai-gateway": "latest",
-		"crypto-js": "latest",
+		"ssl-checker": "latest",
 		"gray-matter": "latest",
 		"framer-motion": "latest",
 		"next": "15.5.9",
