@@ -1,159 +1,114 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { launchTest } from '@cloudflare/telescope';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
+import { launch } from '@cloudflare/playwright'; // Use Cloudflare's fork
 import fs from 'fs';
-import path from 'path';
 
-// Helper to determine Content-Type based on extension
-const getContentType = (filename: string) => {
-  const ext = path.extname(filename).toLowerCase();
-  const types: Record<string, string> = {
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.json': 'application/json',
-    '.har': 'application/json',
-    '.webm': 'video/webm',
-    '.mp4': 'video/mp4',
-  };
-  return types[ext] || 'application/octet-stream';
-};
-
-// R2 Domain Configuration (Ensure this matches your R2 setup)
+// R2 Domain Configuration
 const R2_CUSTOM_DOMAIN = 'https://c.prokit.uk'; 
 
 export async function POST(req: NextRequest) {
-  let resultsPath = '';
+  let browser = null;
   try {
-    const { url, browser = 'chrome' } = await req.json();
+    const { url } = await req.json();
 
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // 1. Get Context
     const { env } = getCloudflareContext();
-    if (!env.MY_FILES) {
-      return NextResponse.json({ error: 'Storage binding (R2) not configured.' }, { status: 500 });
+    if (!env.BROWSER || !env.MY_FILES) {
+      return NextResponse.json({ error: 'Browser or Storage binding not configured.' }, { status: 500 });
     }
 
-    // 2. Run Telescope Test
-    const result = await launchTest({
-      url,
-      browser,
-      timeout: 45000, // Increased timeout for heavier pages
-      connectionType: 'cable', // Default to cable, can be parameterized
-    });
+    // 1. Launch Browser (Cloudflare Browser Rendering)
+    browser = await launch(env.BROWSER);
+    
+    // 2. Setup Context & Tracing
+    const context = await browser.newContext();
+    
+    // Start tracing (captures screenshots, snapshots, and sources)
+    await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
 
-    if (!result.success) {
-      return NextResponse.json({ error: result.error || 'Telescope test failed' }, { status: 500 });
-    }
-
-    const { testId } = result;
-    resultsPath = result.resultsPath;
-
-    // 3. Prepare Artifacts for Upload
-    const artifacts: { name: string; path: string; folder?: string }[] = [];
-    const jsonResults: Record<string, any> = {};
-
-    // Helper to process files
-    const processDir = (dir: string, prefix = '') => {
-      if (!fs.existsSync(dir)) return;
-      const files = fs.readdirSync(dir);
-      
-      for (const file of files) {
-        const fullPath = path.join(dir, file);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          processDir(fullPath, `${prefix}${file}/`);
-        } else {
-          // Identify specific important files
-          if (file === 'metrics.json') jsonResults.metrics = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
-          else if (file === 'console.json') jsonResults.console = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
-          else if (file === 'resources.json') jsonResults.resources = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
-          else if (file === 'config.json') jsonResults.config = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
-          
-          // Queue for R2 Upload
-          // We intentionally upload everything including the JSONs for permalink access
-          artifacts.push({ 
-            name: file, 
-            path: fullPath,
-            folder: prefix
-          });
-        }
-      }
-    };
-
-    processDir(resultsPath);
-
-    // 4. Upload to R2 (Parallelized)
-    const uploadPromises = artifacts.map(async (artifact) => {
-      try {
-        const fileBuffer = fs.readFileSync(artifact.path);
-        const r2Key = `telescope/${testId}/${artifact.folder}${artifact.name}`;
-        
-        await env.MY_FILES.put(r2Key, fileBuffer, {
-          httpMetadata: { contentType: getContentType(artifact.name) },
-        });
-
-        return {
-          key: artifact.name,
-          folder: artifact.folder,
-          url: `${R2_CUSTOM_DOMAIN}/${r2Key}`
-        };
-      } catch (e) {
-        console.error(`Failed to upload ${artifact.name}:`, e);
-        return null;
-      }
-    });
-
-    const uploadedFiles = (await Promise.all(uploadPromises)).filter(Boolean);
-
-    // 5. Structure the Response
-    // Group filmstrip images
-    const filmstrip = uploadedFiles
-      .filter(f => f?.folder === 'filmstrip/')
-      .sort((a, b) => {
-        // Sort by frame number if possible "frame_1.jpg"
-        const numA = parseInt(a?.key.match(/\d+/)?.[0] || '0');
-        const numB = parseInt(b?.key.match(/\d+/)?.[0] || '0');
-        return numA - numB;
+    const page = await context.newPage();
+    const consoleLogs: any[] = [];
+    
+    // Capture Console Logs
+    page.on('console', msg => {
+      consoleLogs.push({
+        type: msg.type(),
+        text: msg.text(),
+        location: msg.location()
       });
+    });
 
-    const mainAssets = {
-      screenshot: uploadedFiles.find(f => f?.key === 'screenshot.png')?.url,
-      video: uploadedFiles.find(f => f?.key.endsWith('.webm') || f?.key.endsWith('.mp4'))?.url,
-      har: uploadedFiles.find(f => f?.key === 'pageload.har')?.url,
-    };
+    // 3. Navigate & Wait
+    const startTime = Date.now();
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    const endTime = Date.now();
+
+    // 4. Collect Metrics (Core Web Vitals) via Injection
+    // We use a script to extract Performance API data
+    const metrics = await page.evaluate(() => {
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+      const paint = performance.getEntriesByType('paint');
+      
+      const fcp = paint.find(p => p.name === 'first-contentful-paint')?.startTime || 0;
+      
+      // Rough LCP approximation (usually requires PerformanceObserver during load)
+      // This is a simplified snapshot of what's available now
+      return {
+        ttfb: nav ? nav.responseStart - nav.requestStart : 0,
+        domLoad: nav ? nav.domContentLoadedEventEnd - nav.startTime : 0,
+        windowLoad: nav ? nav.loadEventEnd - nav.startTime : 0,
+        fcp: fcp,
+      };
+    });
+
+    // 5. Take High-Res Screenshot
+    const screenshotBuffer = await page.screenshot({ fullPage: false });
+
+    // 6. Stop Tracing & Save Trace
+    // Traces are saved to a local temp path in the worker
+    const tracePath = `/tmp/trace_${Date.now()}.zip`;
+    await context.tracing.stop({ path: tracePath });
+    const traceBuffer = fs.readFileSync(tracePath);
+
+    // 7. Upload Artifacts to R2
+    const testId = crypto.randomUUID();
+    const screenshotKey = `playwright/${testId}/screenshot.png`;
+    const traceKey = `playwright/${testId}/trace.zip`;
+
+    await Promise.all([
+      env.MY_FILES.put(screenshotKey, screenshotBuffer, {
+        httpMetadata: { contentType: 'image/png' }
+      }),
+      env.MY_FILES.put(traceKey, traceBuffer, {
+        httpMetadata: { contentType: 'application/zip' }
+      })
+    ]);
+
+    await browser.close();
 
     return NextResponse.json({
       success: true,
       testId,
       urls: {
-        ...mainAssets,
-        filmstrip: filmstrip.map(f => f?.url)
+        screenshot: `${R2_CUSTOM_DOMAIN}/${screenshotKey}`,
+        trace: `${R2_CUSTOM_DOMAIN}/${traceKey}`,
       },
       data: {
-        metrics: jsonResults.metrics || {},
-        console: jsonResults.console || [],
-        resources: jsonResults.resources || [],
-        config: jsonResults.config || {}
+        metrics: {
+          ...metrics,
+          duration: endTime - startTime
+        },
+        console: consoleLogs
       }
     });
 
   } catch (error: unknown) {
-    console.error('Agent Error:', error);
+    if (browser) await browser.close();
+    console.error('Playwright Error:', error);
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: msg }, { status: 500 });
-  } finally {
-    // 6. Cleanup Ephemeral Files
-    if (resultsPath && fs.existsSync(resultsPath)) {
-      try {
-        fs.rmSync(resultsPath, { recursive: true, force: true });
-      } catch (e) {
-        console.error('Cleanup failed:', e);
-      }
-    }
   }
 }
