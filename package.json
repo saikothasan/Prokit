@@ -26,6 +26,7 @@
 		"@cloudflare/ai-gateway": "latest",
 		"ssl-checker": "latest",
 		"speaker": "latest",
+    "playwright": "latest",
 		"recharts": "latest",
 		"clsx": "latest",
 		"tailwind-merge": "latest",
@@ -43,6 +44,7 @@
 	"devDependencies": {
 		"@eslint/eslintrc": "^3",
 		"@faker-js/faker": "latest",
+    "@cloudflare/playwright": "latest",
 		"@tailwindcss/forms": "latest",
 		"@tailwindcss/aspect-ratio": "latest",
 		"@tailwindcss/typography": "latest",
