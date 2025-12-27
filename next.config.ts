@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
     loader: "custom",
     loaderFile: "./image-loader.ts",
   },
+
+  // FIX: Tell Webpack to ignore "cloudflare:" imports so they work on the Edge
+  webpack: (config) => {
+    config.externals.push({
+      "cloudflare:sockets": "commonjs cloudflare:sockets",
+    });
+    return config;
+  },
   
   // Security Headers
   async headers() {
