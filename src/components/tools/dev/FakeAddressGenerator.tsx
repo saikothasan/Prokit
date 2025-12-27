@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Copy, RefreshCw, User, MapPin, Phone, Building, Flag, Check, Hash } from 'lucide-react';
+import { Copy, RefreshCw, User, MapPin, Building, Check, Hash } from 'lucide-react';
 import { faker } from '@faker-js/faker';
 
 interface AddressData {
