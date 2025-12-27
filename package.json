@@ -26,7 +26,7 @@
     "@cloudflare/ai-gateway": "latest",
     "ssl-checker": "latest",
     "speaker": "latest",
-    "proxy-chain": "latest",
+    "https-proxy-agent": "latest",
     "recharts": "latest",
     "clsx": "latest",
     "tailwind-merge": "latest",
