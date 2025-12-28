@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Globe, Search, Loader2, AlertCircle } from 'lucide-react';
 
-// Define a flexible type for the DNS records since they vary by type (string[], objects, etc.)
+// Define a flexible type for the DNS records since they vary by type
 type DnsRecord = string[] | Record<string, unknown>[] | string[][] | unknown;
 
 interface DnsApiResponse {
@@ -42,7 +42,6 @@ export default function DnsLookupTool() {
         setError(data.error || 'Failed to fetch records');
       }
     } catch {
-      // Removed unused 'err' variable to satisfy linter
       setError('Network error occurred');
     } finally {
       setLoading(false);
@@ -75,7 +74,10 @@ export default function DnsLookupTool() {
             onChange={(e) => setRecordType(e.target.value)}
             className="bg-zinc-100 dark:bg-zinc-800 rounded-xl px-4 py-3 font-medium cursor-pointer"
           >
-            {['A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME'].map(t => (
+            {[
+              'A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME', 
+              'PTR', 'SOA', 'SRV', 'CAA'
+            ].map(t => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
@@ -98,7 +100,12 @@ export default function DnsLookupTool() {
             </div>
           ) : (
             <div className="space-y-2">
-              <h3 className="font-semibold text-zinc-500 text-sm uppercase tracking-wider">Results ({recordType})</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-zinc-500 text-sm uppercase tracking-wider">Results ({recordType})</h3>
+                <span className="text-xs text-zinc-400 font-mono">
+                  {Array.isArray(result) ? `${result.length} record(s)` : '1 record'}
+                </span>
+              </div>
               <pre className="bg-zinc-50 dark:bg-zinc-950 p-4 rounded-xl overflow-x-auto text-sm font-mono text-zinc-800 dark:text-zinc-200">
                 {JSON.stringify(result, null, 2)}
               </pre>
