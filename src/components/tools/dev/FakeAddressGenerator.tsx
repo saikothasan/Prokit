@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { 
   Copy, RefreshCw, User, MapPin, Building, Check, Hash, 
-  Globe, CreditCard, Wifi, Lock 
+  Globe, CreditCard, Wifi 
 } from 'lucide-react';
 import type { FakeIdentity } from '@/app/api/fake-address/route';
 
@@ -60,6 +60,11 @@ const LOCALES = [
   { code: 'zh_TW', name: 'Chinese (Taiwan)' },
 ];
 
+interface ApiResponse {
+  success: boolean;
+  data: FakeIdentity;
+}
+
 export default function FakeAddressGenerator() {
   const [data, setData] = useState<FakeIdentity | null>(null);
   const [loading, setLoading] = useState(false);
@@ -74,7 +79,9 @@ export default function FakeAddressGenerator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locale: selectedLocale }),
       });
-      const result = await response.json();
+      
+      // Fix: Cast the unknown JSON result to our expected interface
+      const result = (await response.json()) as ApiResponse;
       
       if (result.success) {
         setData(result.data);
