@@ -52,10 +52,12 @@ export default function WhatIsMyIp() {
   const fetchIpData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/ip-lookup');
-      if (!res.ok) throw new Error('Failed to fetch IP data');
+      // Ensure we clear previous errors on retry
+      setError('');
       
-      // Fix: Cast the unknown json response to our expected type
+      const res = await fetch('/api/ip-lookup');
+      if (!res.ok) throw new Error(`Analysis failed: ${res.statusText}`);
+      
       const json = (await res.json()) as ApiResponse;
       
       if (json.error) throw new Error(json.error);
@@ -94,11 +96,15 @@ export default function WhatIsMyIp() {
           onClick={fetchIpData}
           className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
         >
-          Retry
+          Retry Analysis
         </button>
       </div>
     );
   }
+
+  // Safe formatting helpers to prevent crashes
+  const safeLat = typeof data.geo.latitude === 'number' ? data.geo.latitude.toFixed(4) : 'N/A';
+  const safeLong = typeof data.geo.longitude === 'number' ? data.geo.longitude.toFixed(4) : 'N/A';
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
@@ -177,7 +183,7 @@ export default function WhatIsMyIp() {
             <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
               <span className="text-gray-500">Coordinates</span>
               <span className="font-mono text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
-                {data.geo.latitude.toFixed(4)}, {data.geo.longitude.toFixed(4)}
+                {safeLat}, {safeLong}
               </span>
             </div>
             <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
