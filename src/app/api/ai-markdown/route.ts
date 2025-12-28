@@ -4,16 +4,16 @@ import { getCloudflareContext } from '@opennextjs/cloudflare';
 
 interface MarkdownRequestBody {
   url: string;
+  enableFrontmatter?: boolean;
 }
 
-// 1. Define the interface for the AI model response
 interface AiModelResponse {
   response?: string;
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { url } = (await req.json()) as MarkdownRequestBody;
+    const { url, enableFrontmatter = true } = (await req.json()) as MarkdownRequestBody;
     const { env } = getCloudflareContext();
 
     if (!env.MY_BROWSER || !env.AI) {
@@ -27,8 +27,6 @@ export async function POST(req: NextRequest) {
     try {
         const sessions = await puppeteer.sessions(env.MY_BROWSER);
         const freeSessions = sessions.filter((s) => !s.connectionId);
-        
-        // FIX: Assign to a variable to satisfy TypeScript strict null checks
         const firstSession = freeSessions[0];
         
         if (firstSession) {
@@ -46,13 +44,14 @@ export async function POST(req: NextRequest) {
         });
     }
 
-    // --- B. SCRAPING ---
+    // --- B. SCRAPING & METADATA EXTRACTION ---
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     
+    // Optimize: block unnecessary resources
     await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if (['image', 'font', 'stylesheet'].includes(req.resourceType())) {
+        if (['image', 'font', 'stylesheet', 'media'].includes(req.resourceType())) {
             req.abort();
         } else {
             req.continue();
@@ -61,34 +60,78 @@ export async function POST(req: NextRequest) {
 
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-    const content = await page.evaluate(() => {
-        const noise = document.querySelectorAll('script, style, noscript, iframe, svg');
+    // Extract content AND Metadata
+    const pageData = await page.evaluate(() => {
+        // 1. Extract SEO Metadata
+        const getMeta = (name: string) => document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || '';
+        const getProp = (prop: string) => document.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') || '';
+        
+        const metadata = {
+            title: document.title || '',
+            description: getMeta('description') || getProp('og:description'),
+            keywords: getMeta('keywords'),
+            author: getMeta('author') || getProp('article:author'),
+            image: getProp('og:image'),
+            url: window.location.href,
+        };
+
+        // 2. Clean Content
+        const noise = document.querySelectorAll('script, style, noscript, iframe, svg, nav, footer, .ads, .cookie-banner');
         noise.forEach(n => n.remove());
-        return document.body.innerHTML.slice(0, 15000); 
+        
+        // Return body content (truncated to avoid context limit)
+        return {
+            content: document.body.innerHTML.slice(0, 15000),
+            metadata
+        };
     });
 
     await page.close();
     browser.disconnect(); 
 
     // --- C. AI CONVERSION ---
-    const systemPrompt = `You are an expert Content Converter. 
-    Task: Convert the provided HTML content into clean, structured Markdown.
+    const systemPrompt = `You are an expert SEO Content Converter. 
+    Task: Convert the provided HTML content into clean, semantic, and structured Markdown.
+    
     Rules:
-    1. Ignore navigation menus, footers, and ads. Focus on the main article/content.
-    2. Use proper headers (#, ##).
+    1. Focus on the main article/content. Ignore leftover UI elements.
+    2. Use semantic headers (# H1 for title, ## H2 for sections).
     3. Format links as [text](url).
-    4. Format code blocks with backticks.
-    5. Do not include any conversational text ("Here is the markdown..."). Just output the Markdown.`;
+    4. Format code blocks with backticks and language tags.
+    5. Do not output any conversational text. ONLY output the Markdown.
+    `;
 
     const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `HTML Content:\n${content}` }
+        { role: 'user', content: `HTML Content:\n${pageData.content}` }
       ]
     });
 
     const aiResult = response as unknown as AiModelResponse;
-    const markdown = aiResult.response || "Failed to generate markdown.";
+    let markdown = aiResult.response || "Failed to generate markdown.";
+
+    // --- D. FRONTMATTER INJECTION ---
+    if (enableFrontmatter) {
+        const d = new Date().toISOString().split('T')[0];
+        const { title, description, keywords, author, image, url: pageUrl } = pageData.metadata;
+        
+        // Escape quotes for YAML
+        const safe = (str: string) => (str || '').replace(/"/g, '\\"');
+
+        const frontmatter = `---
+title: "${safe(title)}"
+description: "${safe(description)}"
+keywords: "${safe(keywords)}"
+author: "${safe(author)}"
+date: "${d}"
+url: "${pageUrl}"
+image: "${image}"
+---
+
+`;
+        markdown = frontmatter + markdown;
+    }
 
     return NextResponse.json({ success: true, data: markdown });
 
