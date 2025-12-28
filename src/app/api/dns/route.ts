@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as dns } from 'node:dns';
 
-
 interface DnsRequest {
   domain: string;
-  type: 'A' | 'AAAA' | 'MX' | 'TXT' | 'NS' | 'CNAME';
+  type: 'A' | 'AAAA' | 'MX' | 'TXT' | 'NS' | 'CNAME' | 'PTR' | 'SOA' | 'SRV' | 'CAA';
 }
 
 export async function POST(req: NextRequest) {
@@ -36,6 +35,18 @@ export async function POST(req: NextRequest) {
       case 'CNAME':
         result = await dns.resolveCname(domain);
         break;
+      case 'PTR':
+        result = await dns.resolvePtr(domain);
+        break;
+      case 'SOA':
+        result = await dns.resolveSoa(domain);
+        break;
+      case 'SRV':
+        result = await dns.resolveSrv(domain);
+        break;
+      case 'CAA':
+        result = await dns.resolveCaa(domain);
+        break;
       default:
         return NextResponse.json({ error: 'Unsupported record type' }, { status: 400 });
     }
@@ -43,7 +54,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: result });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    const errorCode = error && typeof error === 'object' && 'code' in error ? (error as { code: string }).code : undefined;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const errorCode = (error as any).code;
 
     return NextResponse.json(
       { success: false, error: errorCode || errorMessage },
