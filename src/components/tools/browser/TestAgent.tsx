@@ -5,7 +5,7 @@ import {
   Play, Loader2, AlertCircle, Globe, 
   Gauge, Activity, Terminal,
   Layout, Search, CheckCircle2, AlertTriangle, 
-  Image as ImageIcon, Share2, Link as LinkIcon,
+  Image as ImageIcon, Share2,
   Maximize
 } from 'lucide-react';
 
@@ -333,7 +333,7 @@ export default function TestAgent() {
 
 // --- Subcomponents ---
 
-function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: any; label: string }) {
+function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: React.ElementType; label: string }) {
   return (
     <button
       onClick={onClick}
@@ -348,7 +348,7 @@ function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; on
   );
 }
 
-function MetricCard({ label, value, unit, icon: Icon, color }: { label: string; value: number; unit: string; icon: any; color: string }) {
+function MetricCard({ label, value, unit, icon: Icon, color }: { label: string; value: number; unit: string; icon: React.ElementType; color: string }) {
   return (
     <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
       <div className="flex items-center gap-2 text-zinc-500 dark:text-zinc-400 mb-2">
