@@ -34,7 +34,9 @@ export default function CryptoLab() {
           secretKey
         })
       });
-      const data = await res.json();
+      
+      // FIX: Added type assertion 'as CryptoResponse' to resolve build error
+      const data = (await res.json()) as CryptoResponse;
       setResult(data);
     } catch {
       setResult({ error: 'Operation failed' });
