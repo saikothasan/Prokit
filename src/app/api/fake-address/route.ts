@@ -76,6 +76,11 @@ export async function POST(req: NextRequest) {
     const birthDate = fakerInstance.date.birthdate({ min: 18, max: 65, mode: 'age' });
     const age = new Date().getFullYear() - birthDate.getFullYear();
 
+    // Helper for blood type since it's not always available in 'person' directly in older versions or specific locales
+    // relying on generic helper if needed, but 'person.bio' often contains it or we pick random.
+    const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    const bloodType = fakerInstance.helpers.arrayElement(bloodTypes);
+
     const data: FakeIdentity = {
       identity: {
         uuid: fakerInstance.string.uuid(),
@@ -85,7 +90,7 @@ export async function POST(req: NextRequest) {
         gender: fakerInstance.person.sexType(),
         birthday: birthDate,
         age: age,
-        bloodType: fakerInstance.person.bio().match(/Blood type: (.*)/)?.[1] || 'O+', // Fallback or extract
+        bloodType: bloodType,
         avatar: fakerInstance.image.avatar(),
       },
       location: {
