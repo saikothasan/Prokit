@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  ShieldCheck, 
   ShieldAlert, 
   Globe, 
   MapPin, 
   Server, 
   Activity, 
   Wifi, 
-  Navigation,
   Loader2,
-  CheckCircle2,
-  XCircle
+  CheckCircle2
 } from 'lucide-react';
 
 interface IpData {
@@ -55,8 +52,9 @@ export default function WhatIsMyIp() {
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setData(json);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(message);
     } finally {
       setLoading(false);
     }
