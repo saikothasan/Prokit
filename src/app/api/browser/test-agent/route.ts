@@ -5,10 +5,33 @@ import puppeteer from '@cloudflare/puppeteer';
 // R2 Domain Configuration
 const R2_CUSTOM_DOMAIN = 'https://c.prokit.uk'; 
 
+// Define types for our extended data
+interface PerfMetrics {
+  ttfb: number;
+  domLoad: number;
+  windowLoad: number;
+  fcp: number;
+}
+
+interface SeoMetrics {
+  title: string;
+  description: string;
+  keywords: string;
+  h1Count: number;
+  h2Count: number;
+  linksCount: number;
+  imagesCount: number;
+  imagesWithoutAlt: number;
+  viewport: string | null;
+  canonical: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
+  ogImage: string | null;
+}
+
 export async function POST(req: NextRequest) {
   let browser = null;
   try {
-    // Explicitly type the parsed JSON to avoid "Unexpected any" lint errors
     const body = (await req.json()) as { url?: string };
     const { url } = body;
 
@@ -21,12 +44,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Browser or Storage binding not configured.' }, { status: 500 });
     }
 
-    // 1. Launch Browser (Puppeteer)
     browser = await puppeteer.launch(env.MY_BROWSER);
     const page = await browser.newPage();
     
-    // 2. Capture Console Logs
-    // Using explicit types for the log accumulator
+    // Capture Console Logs
     const consoleLogs: { type: string; text: string; location: string }[] = [];
     page.on('console', msg => {
       const location = msg.location();
@@ -37,40 +58,57 @@ export async function POST(req: NextRequest) {
       });
     });
 
-    // 3. Navigate & Wait
     const startTime = Date.now();
-    // Puppeteer uses 'networkidle0' (no connections for 500ms) or 'networkidle2' (max 2 connections)
+    
+    // Set a standard viewport for consistent screenshots/testing
+    await page.setViewport({ width: 1280, height: 800 });
+    
     await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
     const endTime = Date.now();
 
-    // 4. Collect Metrics via Page Evaluation
-    // Typed return to satisfy ESLint
-    interface PerfMetrics {
-        ttfb: number;
-        domLoad: number;
-        windowLoad: number;
-        fcp: number;
-    }
-    
-    const metrics = await page.evaluate((): PerfMetrics => {
+    // Collect Metrics & SEO Data
+    const result = await page.evaluate(() => {
+      // Performance
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       const paint = performance.getEntriesByType('paint');
-      const fcp = paint.find(p => p.name === 'first-contentful-paint')?.startTime || 0;
+      const fcpEntry = paint.find(p => p.name === 'first-contentful-paint');
       
-      return {
+      const metrics: PerfMetrics = {
         ttfb: nav ? nav.responseStart - nav.requestStart : 0,
         domLoad: nav ? nav.domContentLoadedEventEnd - nav.startTime : 0,
         windowLoad: nav ? nav.loadEventEnd - nav.startTime : 0,
-        fcp: fcp,
+        fcp: fcpEntry ? fcpEntry.startTime : 0,
       };
+
+      // SEO Extraction
+      const getMeta = (name: string) => document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || '';
+      const getProp = (prop: string) => document.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') || null;
+      
+      const images = Array.from(document.querySelectorAll('img'));
+      
+      const seo: SeoMetrics = {
+        title: document.title || '',
+        description: getMeta('description'),
+        keywords: getMeta('keywords'),
+        h1Count: document.querySelectorAll('h1').length,
+        h2Count: document.querySelectorAll('h2').length,
+        linksCount: document.querySelectorAll('a').length,
+        imagesCount: images.length,
+        imagesWithoutAlt: images.filter(img => !img.alt || img.alt.trim() === '').length,
+        viewport: getMeta('viewport') || null,
+        canonical: document.querySelector('link[rel="canonical"]')?.getAttribute('href') || null,
+        ogTitle: getProp('og:title'),
+        ogDescription: getProp('og:description'),
+        ogImage: getProp('og:image'),
+      };
+
+      return { metrics, seo };
     });
 
-    // 5. Screenshot (Buffer only, no FS write)
     const screenshotBuffer = await page.screenshot({ fullPage: false });
 
-    // 6. Upload to R2
+    // Upload to R2
     const testId = crypto.randomUUID();
-    // Changed folder to 'puppeteer' to reflect the tool used
     const screenshotKey = `puppeteer/${testId}/screenshot.png`;
 
     await env.MY_FILES.put(screenshotKey, screenshotBuffer, {
@@ -88,9 +126,10 @@ export async function POST(req: NextRequest) {
       },
       data: {
         metrics: {
-          ...metrics,
+          ...result.metrics,
           duration: endTime - startTime
         },
+        seo: result.seo,
         console: consoleLogs
       }
     });
