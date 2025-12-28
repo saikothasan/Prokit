@@ -29,6 +29,7 @@
     "https-proxy-agent": "latest",
     "recharts": "latest",
     "clsx": "latest",
+    "cloudflare": "latest",
     "tailwind-merge": "latest",
     "react-syntax-highlighter": "latest",
     "remark-gfm": "latest",
