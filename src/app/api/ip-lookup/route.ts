@@ -33,8 +33,11 @@ async function checkZone(reversedIp: string, zone: string) {
     );
     await Promise.race([dns.resolve4(lookupHostname), timeoutPromise]);
     return { zone, status: 'listed' as const };
-  } catch (error: any) {
-    if (error.code === 'ENOTFOUND') return { zone, status: 'clean' as const };
+  } catch (error: unknown) {
+    // Node.js DNS errors usually have a 'code' property
+    const code = (error as { code?: string }).code;
+    
+    if (code === 'ENOTFOUND') return { zone, status: 'clean' as const };
     return { zone, status: 'error' as const };
   }
 }
@@ -63,7 +66,9 @@ export async function GET(req: NextRequest) {
     const reversedIp = reverseIp(ip);
     const blacklistPromise = Promise.all(DNSBL_ZONES.map(zone => checkZone(reversedIp, zone)));
 
-    const [geoData, blacklistResults] = await Promise.all([geoPromise, blacklistPromise]);
+    // Define strict type for the geo response
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [geoData, blacklistResults] = await Promise.all([geoPromise as Promise<any>, blacklistPromise]);
 
     // 3. Calculate Reputation Score
     // Start at 100. High impact lists penalize more.
@@ -111,7 +116,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('IP Lookup Error:', error);
     return NextResponse.json({ error: 'Failed to analyze IP' }, { status: 500 });
   }
