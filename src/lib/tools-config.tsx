@@ -55,6 +55,9 @@ const WhatIsMyIp = dynamic(() => import('@/components/tools/network/WhatIsMyIp')
 const ImageOptimizer = dynamic(() => import('@/components/tools/image/ImageOptimizer'), {
   loading: () => <ToolLoader name="Image Optimizer" />,
 });
+const SsnGenerator = dynamic(() => import('@/components/tools/dev/SsnGenerator'), {
+  loading: () => <ToolLoader name="SSN Generator" />,
+});
 const SslInspector = dynamic(() => import('@/components/tools/security/SslInspector'), {
   loading: () => <ToolLoader name="SSL Inspector" />,
 });
@@ -101,6 +104,15 @@ export const tools: Tool[] = [
     icon: CreditCard,
     keywords: ['bin', 'credit card', 'bank', 'lookup'],
     component: BinChecker,
+  },
+	{
+    slug: 'ssn-generator',
+    name: 'SSN Generator',
+    description: 'Generate valid, non-traceable US Social Security Numbers for testing and QA.',
+    category: 'dev',
+    icon: FileCode,
+    keywords: ['ssn', 'fake', 'generator', 'testing', 'mock', 'data'],
+    component: SsnGenerator,
   },
   {
     slug: 'dns-lookup',
