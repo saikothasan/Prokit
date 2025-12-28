@@ -36,8 +36,9 @@ export default function BlacklistChecker() {
         setResults(json.results);
         setHasSearched(true);
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to perform blacklist check');
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to perform blacklist check';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
