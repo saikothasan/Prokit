@@ -61,6 +61,9 @@ const CryptoLab = dynamic(() => import('@/components/tools/security/CryptoLab'),
 const PortScanner = dynamic(() => import('@/components/tools/security/PortScanner'), {
   loading: () => <ToolLoader name="Port Scanner" />,
 });
+const BlacklistChecker = dynamic(() => import('@/components/tools/security/BlacklistChecker'), {
+  loading: () => <ToolLoader name="Blacklist Checker" />,
+});
 const FakeAddress = dynamic(() => import('@/components/tools/dev/FakeAddressGenerator'), {
   loading: () => <ToolLoader name="Fake Address Gen" />,
 });
@@ -122,6 +125,15 @@ export const tools: Tool[] = [
     icon: ImageIcon,
     keywords: ['image', 'compress', 'webp', 'avif'],
     component: ImageOptimizer,
+  },
+	{
+    slug: 'blacklist-checker',
+    name: 'Blacklist Check',
+    description: 'Scan your domain or IP against major DNSBL blacklists to check email reputation.',
+    category: 'security',
+    icon: Shield, // You can also import 'ShieldAlert' from lucide-react if preferred
+    keywords: ['blacklist', 'spam', 'email', 'dnsbl', 'reputation'],
+    component: BlacklistChecker,
   },
   {
     slug: 'ssl-check',
