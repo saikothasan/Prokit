@@ -32,9 +32,10 @@ export async function GET(req: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to check blacklists';
     return NextResponse.json(
-      { error: error.message || 'Failed to check blacklists' }, 
+      { error: errorMessage }, 
       { status: 500 }
     );
   }
