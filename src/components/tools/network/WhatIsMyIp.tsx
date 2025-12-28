@@ -35,6 +35,11 @@ interface IpData {
   };
 }
 
+// Helper interface for the API response which might contain an error
+interface ApiResponse extends IpData {
+  error?: string;
+}
+
 export default function WhatIsMyIp() {
   const [data, setData] = useState<IpData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +54,10 @@ export default function WhatIsMyIp() {
       setLoading(true);
       const res = await fetch('/api/ip-lookup');
       if (!res.ok) throw new Error('Failed to fetch IP data');
-      const json = await res.json();
+      
+      // Fix: Cast the unknown json response to our expected type
+      const json = (await res.json()) as ApiResponse;
+      
       if (json.error) throw new Error(json.error);
       setData(json);
     } catch (err: unknown) {
