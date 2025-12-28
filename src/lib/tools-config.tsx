@@ -49,6 +49,9 @@ const DnsLookup = dynamic(() => import('@/components/tools/dns/DnsLookup'), {
 const Translator = dynamic(() => import('@/components/tools/ai/Translator'), {
   loading: () => <ToolLoader name="AI Translator" />,
 });
+const WhatIsMyIp = dynamic(() => import('@/components/tools/network/WhatIsMyIp'), {
+  loading: () => <ToolLoader name="IP Analyzer" />,
+});
 const ImageOptimizer = dynamic(() => import('@/components/tools/image/ImageOptimizer'), {
   loading: () => <ToolLoader name="Image Optimizer" />,
 });
@@ -134,6 +137,15 @@ export const tools: Tool[] = [
     icon: Shield, // You can also import 'ShieldAlert' from lucide-react if preferred
     keywords: ['blacklist', 'spam', 'email', 'dnsbl', 'reputation'],
     component: BlacklistChecker,
+  },
+	{
+    slug: 'what-is-my-ip',
+    name: 'What is my IP',
+    description: 'Deep analysis of your IP address including Geo-location, ISP, ASN, and Reputation Score.',
+    category: 'security',
+    icon: Network,
+    keywords: ['ip', 'my ip', 'geo', 'location', 'isp', 'score'],
+    component: WhatIsMyIp,
   },
   {
     slug: 'ssl-check',
