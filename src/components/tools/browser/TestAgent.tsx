@@ -8,6 +8,9 @@ import {
   Image as ImageIcon, Share2,
   Maximize
 } from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell 
+} from 'recharts';
 
 interface TestResult {
   success: boolean;
@@ -88,6 +91,29 @@ export default function TestAgent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Prepare data for the chart if result exists
+  const chartData = result ? [
+    { name: 'TTFB', value: result.data.metrics.ttfb, fill: '#3b82f6', full: 'Time to First Byte' },
+    { name: 'FCP', value: result.data.metrics.fcp, fill: '#22c55e', full: 'First Contentful Paint' },
+    { name: 'DOM', value: result.data.metrics.domLoad, fill: '#f59e0b', full: 'DOM Content Loaded' },
+    { name: 'Load', value: result.data.metrics.windowLoad, fill: '#ec4899', full: 'Window Load' },
+    { name: 'Total', value: result.data.metrics.duration, fill: '#a855f7', full: 'Total Duration' },
+  ] : [];
+
+  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white dark:bg-zinc-900 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl">
+          <p className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{payload[0].payload.full}</p>
+          <p className="text-zinc-600 dark:text-zinc-400">
+            {label}: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">{payload[0].value.toFixed(0)}ms</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -281,7 +307,46 @@ export default function TestAgent() {
             )}
 
             {activeTab === 'performance' && (
-              <div className="space-y-6">
+              <div className="space-y-8">
+                {/* Visual Chart Section */}
+                <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                  <h3 className="text-lg font-semibold mb-6 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-indigo-500" />
+                    Load Timeline
+                  </h3>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={chartData}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} opacity={0.2} />
+                        <XAxis 
+                          dataKey="name" 
+                          stroke="#71717a" 
+                          tick={{ fill: '#71717a', fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis 
+                          stroke="#71717a" 
+                          tick={{ fill: '#71717a', fontSize: 12 }}
+                          tickLine={false}
+                          axisLine={false}
+                          tickFormatter={(value) => `${value}ms`}
+                        />
+                        <Tooltip cursor={{ fill: 'transparent' }} content={<CustomTooltip />} />
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={1500}>
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* Metrics Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <MetricCard label="TTFB" value={result.data.metrics.ttfb} unit="ms" icon={Activity} color="text-blue-500" />
                   <MetricCard label="FCP" value={result.data.metrics.fcp} unit="ms" icon={Gauge} color="text-green-500" />
@@ -293,7 +358,7 @@ export default function TestAgent() {
                   <Activity className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div className="text-sm">
                     <p className="font-semibold mb-1">About Metrics</p>
-                    <p>These metrics are captured from a real headless browser session on Cloudflare Workers. They represent the experience of a first-time visitor with an empty cache.</p>
+                    <p>These metrics are captured from a real headless browser session. TTFB measures server response time. FCP is when the first text/image appears. DOM Load is when HTML parsing is complete.</p>
                   </div>
                 </div>
               </div>
