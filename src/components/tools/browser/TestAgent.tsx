@@ -102,7 +102,19 @@ export default function TestAgent() {
     { name: 'Total', value: result.data.metrics.duration, fill: '#a855f7', full: 'Total Duration' },
   ] : [];
 
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string }) => {
+  // Define specific type for Recharts tooltip payload
+  interface TooltipPayloadItem {
+    value: number;
+    payload: {
+      full: string;
+    };
+  }
+
+  const CustomTooltip = ({ active, payload, label }: { 
+    active?: boolean; 
+    payload?: TooltipPayloadItem[]; 
+    label?: string 
+  }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white dark:bg-zinc-900 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl">
