@@ -19,12 +19,10 @@ const DNSBL_ZONES = [
 
 // --- Helpers ---
 
-// Reverse IP for DNSBL lookup (1.2.3.4 -> 4.3.2.1)
 function reverseIp(ip: string): string {
   return ip.split('.').reverse().join('.');
 }
 
-// Check a single DNSBL zone
 async function checkZone(reversedIp: string, zone: string) {
   const lookupHostname = `${reversedIp}.${zone}`;
   try {
@@ -34,9 +32,7 @@ async function checkZone(reversedIp: string, zone: string) {
     await Promise.race([dns.resolve4(lookupHostname), timeoutPromise]);
     return { zone, status: 'listed' as const };
   } catch (error: unknown) {
-    // Node.js DNS errors usually have a 'code' property
     const code = (error as { code?: string }).code;
-    
     if (code === 'ENOTFOUND') return { zone, status: 'clean' as const };
     return { zone, status: 'error' as const };
   }
@@ -47,35 +43,39 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     let ip = searchParams.get('ip');
 
-    // 1. Detect IP if not provided
+    // --- Deep IP Detection Logic ---
     if (!ip) {
+      // 1. Priority: Cloudflare Header (Most trusted when behind CF)
+      const cfIp = req.headers.get('cf-connecting-ip');
+      
+      // 2. Fallback: Standard X-Forwarded-For (First IP is usually the client)
       const forwarded = req.headers.get('x-forwarded-for');
-      ip = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
+      const forwardedIp = forwarded ? forwarded.split(',')[0].trim() : null;
+
+      // 3. Fallback: Development/Direct connection
+      ip = cfIp || forwardedIp || '127.0.0.1';
     }
 
-    // Validate IP (Basic check)
+    // Validate IP format (IPv4)
     if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
-      return NextResponse.json({ error: 'Invalid IP address format' }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid IP address format or IPv6 not supported for BL check' }, { status: 400 });
     }
 
-    // 2. Parallel Data Fetching
-    // We use ipwho.is for free, no-key, HTTPS-compatible GeoIP data
+    // --- Parallel Data Fetching ---
+    // Using ipwho.is for GeoIP
     const geoPromise = fetch(`https://ipwho.is/${ip}`).then(res => res.json());
     
     // DNSBL Checks
     const reversedIp = reverseIp(ip);
     const blacklistPromise = Promise.all(DNSBL_ZONES.map(zone => checkZone(reversedIp, zone)));
 
-    // Define strict type for the geo response
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [geoData, blacklistResults] = await Promise.all([geoPromise as Promise<any>, blacklistPromise]);
 
-    // 3. Calculate Reputation Score
-    // Start at 100. High impact lists penalize more.
+    // --- Reputation Score Calculation ---
     let score = 100;
     const listedCount = blacklistResults.filter(r => r.status === 'listed').length;
     
-    // Penalties
     blacklistResults.forEach(r => {
       if (r.status === 'listed') {
         if (r.zone.includes('spamhaus') || r.zone.includes('spamcop')) score -= 25;
@@ -83,10 +83,8 @@ export async function GET(req: NextRequest) {
       }
     });
     
-    // Cap score
     score = Math.max(0, Math.min(100, score));
 
-    // Determine Risk Level
     let riskLevel = 'Low';
     if (score < 80) riskLevel = 'Medium';
     if (score < 50) riskLevel = 'High';
