@@ -8,7 +8,7 @@ interface TtsRequest {
   model?: string;
 }
 
-export const runtime = 'edge'; // Use Edge Runtime for lower latency
+//export const runtime = 'edge'; // Use Edge Runtime for lower latency
 
 export async function POST(req: NextRequest) {
   try {
