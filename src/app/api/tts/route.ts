@@ -1,4 +1,3 @@
-// src/app/api/tts/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@deepgram/sdk';
 import { getCloudflareContext } from "@opennextjs/cloudflare";
@@ -9,7 +8,7 @@ interface TtsRequest {
   model?: string;
 }
 
-// export const runtime = 'edge';
+export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
@@ -76,4 +75,5 @@ export async function POST(req: NextRequest) {
       { error: 'Failed to generate speech' }, 
       { status: 500 }
     );
-  export
+  }
+}
