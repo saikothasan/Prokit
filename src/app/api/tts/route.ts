@@ -20,18 +20,17 @@ export async function POST(req: NextRequest) {
 
     const { env } = getCloudflareContext();
 
-    // 1. Retrieve Secret from Cloudflare Secrets Store or Standard Env
-    // If you used the 'secrets_store' binding named "SECRETS":
+    // 1. Retrieve Secret
+    // We access env.SECRETS directly now that it is typed in cloudflare-env.d.ts
     let apiKey = env.DEEPGRAM_API_KEY;
     
-    // Check if the SECRETS binding exists (specific to Secrets Store integration)
-    if ((env as any).SECRETS) {
+    // Optional: Check Secrets Store if defined
+    if (env.SECRETS) {
       try {
-        // @ts-expect-error - The SECRETS binding type isn't automatically inferred in all setups yet
-        const secretValue = await (env as any).SECRETS.get("DEEPGRAM_API_KEY");
+        const secretValue = await env.SECRETS.get("DEEPGRAM_API_KEY");
         if (secretValue) apiKey = secretValue;
       } catch (e) {
-        console.warn("Failed to fetch from Secrets Store, falling back to env var", e);
+        console.warn("Failed to fetch from Secrets Store", e);
       }
     }
 
@@ -41,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     const deepgram = createClient(apiKey);
 
-    // 2. Request Audio from Deepgram
+    // 2. Request Audio
     const response = await deepgram.speak.request(
       { text },
       {
@@ -57,9 +56,9 @@ export async function POST(req: NextRequest) {
       throw new Error('No audio stream received from Deepgram');
     }
 
-    // 3. Stream response directly to client (Low Latency)
-    // @ts-expect-error - ReadableStream type mismatch is common in Edge but valid
-    return new NextResponse(stream, {
+    // 3. Stream response
+    // Cast to unknown first if strict typing for ReadableStream vs Web Stream conflicts
+    return new NextResponse(stream as unknown as ReadableStream, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Tts-Model': model || 'aura-asteria-en',
