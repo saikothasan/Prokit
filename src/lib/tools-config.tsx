@@ -1,7 +1,7 @@
 import dynamic from 'next/dynamic';
 import { 
   Network,
-  Globe, 
+  Globe,
   Search, 
   Shield, 
   Terminal, 
@@ -14,7 +14,7 @@ import {
   ScanSearch,
   Languages
 } from 'lucide-react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, AudioLines } from 'lucide-react';
 import React from 'react';
 
 export type ToolCategory = 'security' | 'ai' | 'dns' | 'image' | 'dev';
@@ -54,6 +54,9 @@ const WhatIsMyIp = dynamic(() => import('@/components/tools/network/WhatIsMyIp')
 });
 const ImageOptimizer = dynamic(() => import('@/components/tools/image/ImageOptimizer'), {
   loading: () => <ToolLoader name="Image Optimizer" />,
+});
+const TextToSpeech = dynamic(() => import('@/components/tools/ai/TextToSpeech'), {
+  loading: () => <ToolLoader name="AI Text to Speech" />,
 });
 const SsnGenerator = dynamic(() => import('@/components/tools/dev/SsnGenerator'), {
   loading: () => <ToolLoader name="SSN Generator" />,
@@ -107,6 +110,15 @@ export const tools: Tool[] = [
     icon: CreditCard,
     keywords: ['bin', 'credit card', 'bank', 'lookup'],
     component: BinChecker,
+  },
+	{
+    slug: 'text-to-speech',
+    name: 'AI Voice Studio',
+    description: 'Convert text into lifelike human speech using Deepgram Aura models. Supports multiple accents and tones.',
+    category: 'ai',
+    icon: AudioLines, // Uses Lucide-react 'AudioLines' icon
+    keywords: ['tts', 'speech', 'voice', 'audio', 'deepgram', 'ai'],
+    component: TextToSpeech,
   },
 	{
     slug: 'flux-image-gen',
