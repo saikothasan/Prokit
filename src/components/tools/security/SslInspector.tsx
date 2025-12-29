@@ -1,17 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { ShieldCheck, Search, AlertCircle, Calendar, Lock, FileKey } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Search, AlertCircle, Calendar, Lock, FileKey, Server, CheckCircle2, XCircle } from 'lucide-react';
 
 interface SslData {
-  days_remaining: number;
-  valid_from: string;
-  valid_to: string;
+  isValid: boolean;
+  validationError: string | null;
+  daysRemaining: number;
+  validFrom: string;
+  validTo: string;
   protocol: string;
   cipher: string;
   fingerprint: string;
-  subject: { CN: string };
-  issuer: { O: string };
+  serialNumber: string;
+  subject: { CN: string; O?: string; OU?: string };
+  issuer: { CN: string; O?: string; C?: string };
+  sans: string[];
   error?: string;
 }
 
@@ -29,9 +33,13 @@ export default function SslInspector() {
 
     try {
       const res = await fetch(`/api/ssl-check?host=${encodeURIComponent(domain)}`);
-      const json = (await res.json()) as SslData;
-      if (json.error) throw new Error(json.error);
-      setData(json);
+      const json = (await res.json());
+      
+      if (!res.ok || json.error) {
+         throw new Error(json.error || 'Failed to fetch SSL data');
+      }
+      
+      setData(json as SslData);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to inspect certificate');
     } finally {
@@ -39,9 +47,21 @@ export default function SslInspector() {
     }
   };
 
+  const getStatusColor = (data: SslData) => {
+    if (!data.isValid) return 'text-red-600 dark:text-red-400';
+    if (data.daysRemaining < 14) return 'text-amber-600 dark:text-amber-400';
+    return 'text-green-600 dark:text-green-400';
+  };
+
+  const getStatusBg = (data: SslData) => {
+    if (!data.isValid) return 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-900';
+    if (data.daysRemaining < 14) return 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-900';
+    return 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-900';
+  };
+
   return (
     <div className="space-y-12">
-      {/* Tool Section */}
+      {/* Input Section */}
       <div className="bg-white dark:bg-[#111] rounded-3xl p-8 border border-gray-200 dark:border-gray-800 shadow-sm">
         <form onSubmit={checkSsl} className="flex gap-4 max-w-3xl mx-auto mb-8">
           <input
@@ -67,22 +87,34 @@ export default function SslInspector() {
 
         {data && (
           <div className="max-w-4xl mx-auto grid gap-6 md:grid-cols-2 animate-in fade-in slide-in-from-bottom-4">
-            {/* Status Card */}
-            <div className="md:col-span-2 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/50 flex items-center justify-between">
+            
+            {/* Main Status Card */}
+            <div className={`md:col-span-2 p-8 rounded-2xl border flex flex-col md:flex-row items-center justify-between gap-6 ${getStatusBg(data)}`}>
               <div className="flex items-center gap-5">
-                <div className={`p-4 rounded-full ${data.days_remaining > 30 ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'}`}>
-                  <ShieldCheck size={40} />
+                <div className={`p-4 rounded-full bg-white/50 dark:bg-black/20 ${getStatusColor(data)}`}>
+                  {data.isValid ? <ShieldCheck size={40} /> : <ShieldAlert size={40} />}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{data.subject.CN}</h3>
-                  <p className="text-gray-600 dark:text-gray-300 flex items-center gap-2">
-                     Issued by <span className="font-semibold">{data.issuer.O}</span>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    {data.subject.CN}
+                    {data.isValid ? 
+                      <span className="text-xs px-2 py-1 bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-100 rounded-full">Trusted</span> : 
+                      <span className="text-xs px-2 py-1 bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-100 rounded-full">Untrusted</span>
+                    }
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-300 mt-1">
+                     Issued by <span className="font-semibold">{data.issuer.O || data.issuer.CN}</span>
                   </p>
+                  {!data.isValid && data.validationError && (
+                    <p className="text-red-600 dark:text-red-400 text-sm font-mono mt-2 bg-white/50 dark:bg-black/20 p-2 rounded">
+                      Error: {data.validationError}
+                    </p>
+                  )}
                 </div>
               </div>
-              <div className="text-right hidden sm:block">
-                <div className={`text-4xl font-bold ${data.days_remaining > 30 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  {data.days_remaining}
+              <div className="text-center md:text-right">
+                <div className={`text-4xl font-bold ${data.daysRemaining > 30 ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {data.daysRemaining}
                 </div>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Days Left</p>
               </div>
@@ -96,11 +128,11 @@ export default function SslInspector() {
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="text-gray-500">Issued On</span>
-                  <span className="font-mono font-medium">{new Date(data.valid_from).toLocaleDateString()}</span>
+                  <span className="font-mono font-medium">{new Date(data.validFrom).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b border-gray-200 dark:border-gray-700">
                   <span className="text-gray-500">Expires On</span>
-                  <span className="font-mono font-medium">{new Date(data.valid_to).toLocaleDateString()}</span>
+                  <span className="font-mono font-medium">{new Date(data.validTo).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
@@ -121,11 +153,26 @@ export default function SslInspector() {
                 </div>
               </div>
             </div>
+
+             {/* SANs (Subject Alternative Names) */}
+             <div className="md:col-span-2 p-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800">
+               <h4 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white mb-4">
+                 <Server className="w-5 h-5 text-indigo-500" /> Subject Alternative Names (SANs)
+               </h4>
+               <div className="flex flex-wrap gap-2">
+                 {data.sans.map((san, i) => (
+                   <span key={i} className="px-3 py-1 bg-white dark:bg-black border border-gray-200 dark:border-gray-700 rounded-full text-xs font-mono text-gray-600 dark:text-gray-300">
+                     {san}
+                   </span>
+                 ))}
+                 {data.sans.length === 0 && <span className="text-gray-500 italic">No alternative names found</span>}
+               </div>
+            </div>
             
             {/* Fingerprint */}
             <div className="md:col-span-2 p-6 bg-gray-900 text-gray-300 rounded-2xl font-mono text-xs break-all">
                <div className="flex items-center gap-2 text-gray-400 mb-2 font-sans font-bold text-sm">
-                 <FileKey className="w-4 h-4" /> Certificate Fingerprint
+                 <FileKey className="w-4 h-4" /> Certificate Fingerprint (SHA1)
                </div>
                {data.fingerprint}
             </div>
@@ -133,25 +180,14 @@ export default function SslInspector() {
         )}
       </div>
 
-      {/* SEO Text */}
-      <article className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-[#111] p-8 md:p-12 rounded-3xl border border-gray-100 dark:border-gray-800">
+       {/* SEO Text (Keep existing) */}
+       <article className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-[#111] p-8 md:p-12 rounded-3xl border border-gray-100 dark:border-gray-800">
         <h2>SSL Certificate Checker</h2>
         <p>
           Secure your website and build trust with visitors by validating your SSL/TLS configuration. 
           Our <strong>SSL Inspector</strong> performs a deep handshake analysis to verify certificate validity, 
           expiration dates, and chain of trust.
         </p>
-        
-        <div className="grid md:grid-cols-2 gap-6 my-8 not-prose">
-          <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-            <h3 className="font-bold text-blue-900 dark:text-blue-100 mb-2">Why Check SSL?</h3>
-            <p className="text-sm text-blue-800 dark:text-blue-200">Expired certificates cause security warnings that scare away up to 90% of users. Regular monitoring ensures zero downtime.</p>
-          </div>
-          <div className="p-4 rounded-xl bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-800">
-            <h3 className="font-bold text-purple-900 dark:text-purple-100 mb-2">Technical Insight</h3>
-            <p className="text-sm text-purple-800 dark:text-purple-200">Verify you are using modern protocols (TLS 1.2/1.3) and strong ciphers to prevent MITM attacks.</p>
-          </div>
-        </div>
       </article>
     </div>
   );
