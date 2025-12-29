@@ -8,7 +8,7 @@ interface TtsRequest {
   model?: string;
 }
 
-export const runtime = 'edge';
+//export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
