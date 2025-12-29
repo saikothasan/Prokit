@@ -6,8 +6,8 @@ import {
   Pause, 
   Download, 
   Loader2, 
-  // RefreshCw, // Removed unused import
-  // Volume2,   // Removed unused import
+  // RefreshCw, // REMOVED
+  // Volume2,   // REMOVED
   Globe,
   CheckCircle2,
   Sparkles
@@ -68,6 +68,7 @@ export default function TextToSpeech() {
   const handleGenerate = async () => {
     if (!text) return;
     
+    // Reset state
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
     setIsPlaying(false);
@@ -86,6 +87,7 @@ export default function TextToSpeech() {
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
       
+      // Auto-play on success
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.play().catch(() => {});
