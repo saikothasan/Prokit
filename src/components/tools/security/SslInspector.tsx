@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ShieldCheck, ShieldAlert, Search, AlertCircle, Calendar, Lock, FileKey, Server, CheckCircle2, XCircle } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, Search, AlertCircle, Calendar, Lock, FileKey, Server } from 'lucide-react';
 
 interface SslData {
   isValid: boolean;
@@ -16,8 +16,10 @@ interface SslData {
   subject: { CN: string; O?: string; OU?: string };
   issuer: { CN: string; O?: string; C?: string };
   sans: string[];
-  error?: string;
 }
+
+// Helper type for the API response which might be data OR an error
+type ApiResponse = SslData & { error?: string };
 
 export default function SslInspector() {
   const [domain, setDomain] = useState('');
@@ -33,13 +35,15 @@ export default function SslInspector() {
 
     try {
       const res = await fetch(`/api/ssl-check?host=${encodeURIComponent(domain)}`);
-      const json = (await res.json());
+      
+      // Safely cast the unknown JSON to our expected type
+      const json = (await res.json()) as ApiResponse;
       
       if (!res.ok || json.error) {
          throw new Error(json.error || 'Failed to fetch SSL data');
       }
       
-      setData(json as SslData);
+      setData(json);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to inspect certificate');
     } finally {
@@ -180,7 +184,7 @@ export default function SslInspector() {
         )}
       </div>
 
-       {/* SEO Text (Keep existing) */}
+       {/* SEO Text */}
        <article className="prose prose-lg dark:prose-invert max-w-none bg-white dark:bg-[#111] p-8 md:p-12 rounded-3xl border border-gray-100 dark:border-gray-800">
         <h2>SSL Certificate Checker</h2>
         <p>
