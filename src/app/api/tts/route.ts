@@ -8,34 +8,40 @@ interface TtsRequest {
   model?: string;
 }
 
-//export const runtime = 'edge'; // Use Edge Runtime for lower latency
+//export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
     const { text, model } = (await req.json()) as TtsRequest;
 
     if (!text) {
-      return NextResponse.json(
-        { error: 'Text is required' }, 
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    // Retrieve environment variables from Cloudflare context
     const { env } = getCloudflareContext();
-    const apiKey = env.DEEPGRAM_API_KEY;
+
+    // 1. Retrieve Secret from Cloudflare Secrets Store or Standard Env
+    // If you used the 'secrets_store' binding named "SECRETS":
+    let apiKey = env.DEEPGRAM_API_KEY;
+    
+    // Check if the SECRETS binding exists (specific to Secrets Store integration)
+    if ((env as any).SECRETS) {
+      try {
+        // @ts-expect-error - The SECRETS binding type isn't automatically inferred in all setups yet
+        const secretValue = await (env as any).SECRETS.get("DEEPGRAM_API_KEY");
+        if (secretValue) apiKey = secretValue;
+      } catch (e) {
+        console.warn("Failed to fetch from Secrets Store, falling back to env var", e);
+      }
+    }
 
     if (!apiKey) {
-      console.error("DEEPGRAM_API_KEY is missing in environment variables.");
-      return NextResponse.json(
-        { error: 'Service configuration error' }, 
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Service configuration error: API Key missing' }, { status: 500 });
     }
 
     const deepgram = createClient(apiKey);
 
-    // Call Deepgram's Speak API
+    // 2. Request Audio from Deepgram
     const response = await deepgram.speak.request(
       { text },
       {
@@ -51,12 +57,13 @@ export async function POST(req: NextRequest) {
       throw new Error('No audio stream received from Deepgram');
     }
 
-    // Return the audio stream directly to the client with correct headers
-    // @ts-expect-error - ReadableStream type mismatch between web/node standards is common in edge but works
+    // 3. Stream response directly to client (Low Latency)
+    // @ts-expect-error - ReadableStream type mismatch is common in Edge but valid
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Content-Disposition': 'attachment; filename="speech.mp3"',
+        'X-Tts-Model': model || 'aura-asteria-en',
+        'Content-Disposition': `attachment; filename="speech-${Date.now()}.mp3"`,
       },
     });
 
