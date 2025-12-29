@@ -1,4 +1,4 @@
-import { connect, TLSSocket, PeerCertificate } from 'node:tls';
+import { connect, TLSSocket } from 'node:tls';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Define strict return type for clarity
