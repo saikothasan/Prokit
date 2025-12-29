@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import Image from 'next/image';
 import { Sparkles, Download, Loader2, Image as ImageIcon, Wand2, ArrowRight } from 'lucide-react';
 
 interface GenResponse {
@@ -122,15 +123,17 @@ export default function ImageGenerator() {
                <div className="space-y-4">
                  <div className="relative pl-4 border-l-2 border-[var(--border)]">
                    <p className="text-xs text-[var(--muted-foreground)] mb-1">User Input</p>
-                   <p className="text-sm font-medium line-clamp-2">"{prompt}"</p>
+                   {/* FIXED: Escaped quotes */}
+                   <p className="text-sm font-medium line-clamp-2">&quot;{prompt}&quot;</p>
                  </div>
                  
                  <ArrowRight className="w-4 h-4 text-[var(--muted-foreground)] rotate-90 lg:rotate-0 mx-auto lg:mx-0" />
                  
                  <div className="relative pl-4 border-l-2 border-purple-500">
                    <p className="text-xs text-purple-500 mb-1">Flux 2 Optimized</p>
+                   {/* FIXED: Escaped quotes */}
                    <p className="text-sm text-[var(--foreground)] italic leading-relaxed">
-                     "{usedPrompt}"
+                     &quot;{usedPrompt}&quot;
                    </p>
                  </div>
                </div>
@@ -160,15 +163,20 @@ export default function ImageGenerator() {
               </div>
             ) : image ? (
               <>
-                <img 
-                  src={image} 
-                  alt="Flux Generated" 
-                  className="w-full h-full object-contain max-h-[800px] shadow-sm"
-                />
-                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* FIXED: Using Next.js Image component with unoptimized prop for base64 */}
+                <div className="relative w-full h-full min-h-[500px]">
+                  <Image 
+                    src={image} 
+                    alt="Flux Generated" 
+                    fill
+                    className="object-contain p-2"
+                    unoptimized
+                  />
+                </div>
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <button 
                     onClick={downloadImage}
-                    className="px-4 py-2 bg-[var(--background)]/80 backdrop-blur text-[var(--foreground)] rounded-lg font-medium flex items-center gap-2 hover:bg-[var(--background)] shadow-lg"
+                    className="px-4 py-2 bg-[var(--background)]/80 backdrop-blur text-[var(--foreground)] rounded-lg font-medium flex items-center gap-2 hover:bg-[var(--background)] shadow-lg border border-[var(--border)]"
                   >
                     <Download className="w-4 h-4" />
                     Save
