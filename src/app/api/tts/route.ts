@@ -1,3 +1,4 @@
+// src/app/api/tts/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@deepgram/sdk';
 import { getCloudflareContext } from "@opennextjs/cloudflare";
@@ -8,7 +9,7 @@ interface TtsRequest {
   model?: string;
 }
 
-//export const runtime = 'edge';
+// export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,11 +21,11 @@ export async function POST(req: NextRequest) {
 
     const { env } = getCloudflareContext();
 
-    // 1. Retrieve Secret
-    // We access env.SECRETS directly now that it is typed in cloudflare-env.d.ts
+    // 1. Retrieve Secret safely
+    // env.DEEPGRAM_API_KEY is now typed in cloudflare-env.d.ts
     let apiKey = env.DEEPGRAM_API_KEY;
     
-    // Optional: Check Secrets Store if defined
+    // Check Secrets Store if it exists (now typed correctly)
     if (env.SECRETS) {
       try {
         const secretValue = await env.SECRETS.get("DEEPGRAM_API_KEY");
@@ -35,7 +36,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Service configuration error: API Key missing' }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Service configuration error: API Key missing' }, 
+        { status: 500 }
+      );
     }
 
     const deepgram = createClient(apiKey);
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Stream response
-    // Cast to unknown first if strict typing for ReadableStream vs Web Stream conflicts
+    // Use 'unknown' first to safely cast between Node stream and Web stream types without 'any'
     return new NextResponse(stream as unknown as ReadableStream, {
       headers: {
         'Content-Type': 'audio/mpeg',
@@ -72,5 +76,4 @@ export async function POST(req: NextRequest) {
       { error: 'Failed to generate speech' }, 
       { status: 500 }
     );
-  }
-}
+  export
