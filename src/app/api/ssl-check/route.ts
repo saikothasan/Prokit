@@ -1,4 +1,4 @@
-import { connect } from 'node:tls';
+import { connect, type TLSSocket } from 'node:tls';
 import { NextRequest, NextResponse } from 'next/server';
 
 interface SslCheckResponse {
@@ -28,14 +28,17 @@ export async function GET(req: NextRequest) {
   const cleanHost = host.replace(/^https?:\/\//, '').split('/')[0].split('?')[0];
 
   return new Promise<NextResponse>((resolve) => {
-    let socket: any = null;
+    // FIX: Use proper type TLSSocket instead of 'any' to satisfy strict linting
+    let socket: TLSSocket | null = null;
     let isResolved = false;
 
     // Safety timeout wrapper
     const timeoutId = setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
-        if (socket && typeof socket.destroy === 'function') socket.destroy();
+        if (socket && !socket.destroyed) {
+          socket.destroy();
+        }
         resolve(NextResponse.json({ error: 'Connection timed out' }, { status: 504 }));
       }
     }, 5000);
@@ -43,7 +46,6 @@ export async function GET(req: NextRequest) {
     try {
       // Cloudflare Workers node:tls is strict. We cannot pass 'rejectUnauthorized: false'.
       // This means we can only successfully inspect VALID certificates.
-      // Invalid certs will throw an error in the 'error' handler below.
       const options = {
         servername: cleanHost,
       };
@@ -57,7 +59,6 @@ export async function GET(req: NextRequest) {
         const cipher = socket.getCipher();
         const protocol = socket.getProtocol();
 
-        // In strict mode, if we are here, the socket is likely authorized.
         const isAuthorized = socket.authorized;
         const authError = socket.authorizationError;
 
