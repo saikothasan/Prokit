@@ -6,8 +6,8 @@ import {
   Pause, 
   Download, 
   Loader2, 
-  RefreshCw,
-  Volume2,
+  // RefreshCw, // Removed unused import
+  // Volume2,   // Removed unused import
   Globe,
   CheckCircle2,
   Sparkles
@@ -68,7 +68,6 @@ export default function TextToSpeech() {
   const handleGenerate = async () => {
     if (!text) return;
     
-    // Reset state
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     setAudioUrl(null);
     setIsPlaying(false);
@@ -87,7 +86,6 @@ export default function TextToSpeech() {
       const url = URL.createObjectURL(blob);
       setAudioUrl(url);
       
-      // Auto-play on success
       setTimeout(() => {
         if (audioRef.current) {
           audioRef.current.play().catch(() => {});
@@ -212,7 +210,7 @@ export default function TextToSpeech() {
         </div>
       </div>
 
-      {/* Floating Audio Player (appears when audio exists) */}
+      {/* Floating Audio Player */}
       {audioUrl && (
         <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 animate-in slide-in-from-bottom-10 fade-in duration-500 z-50">
           <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border border-gray-200 dark:border-gray-800 p-4 rounded-2xl shadow-2xl flex items-center gap-6 ring-1 ring-black/5">
