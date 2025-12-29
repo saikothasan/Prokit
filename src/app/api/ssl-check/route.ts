@@ -1,7 +1,6 @@
-import { connect, TLSSocket } from 'node:tls';
+import { connect } from 'node:tls';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Define strict return type for clarity
 interface SslCheckResponse {
   isValid: boolean;
   validationError: string | null;
@@ -26,27 +25,27 @@ export async function GET(req: NextRequest) {
   }
 
   // Robust cleaning: remove protocol, paths, and query params
-  // e.g., "https://google.com/search" -> "google.com"
   const cleanHost = host.replace(/^https?:\/\//, '').split('/')[0].split('?')[0];
 
   return new Promise<NextResponse>((resolve) => {
-    let socket: TLSSocket | null = null;
+    let socket: any = null;
     let isResolved = false;
 
     // Safety timeout wrapper
     const timeoutId = setTimeout(() => {
       if (!isResolved) {
         isResolved = true;
-        if (socket) socket.destroy(); // Crucial: Kill the socket
+        if (socket && typeof socket.destroy === 'function') socket.destroy();
         resolve(NextResponse.json({ error: 'Connection timed out' }, { status: 504 }));
       }
     }, 5000);
 
     try {
+      // Cloudflare Workers node:tls is strict. We cannot pass 'rejectUnauthorized: false'.
+      // This means we can only successfully inspect VALID certificates.
+      // Invalid certs will throw an error in the 'error' handler below.
       const options = {
-        servername: cleanHost, // SNI support
-        rejectUnauthorized: false, // Allow connection to inspect bad certs
-        requestCert: true,
+        servername: cleanHost,
       };
 
       socket = connect(443, cleanHost, options, () => {
@@ -58,7 +57,7 @@ export async function GET(req: NextRequest) {
         const cipher = socket.getCipher();
         const protocol = socket.getProtocol();
 
-        // Check if the certificate is actually trusted by the root store
+        // In strict mode, if we are here, the socket is likely authorized.
         const isAuthorized = socket.authorized;
         const authError = socket.authorizationError;
 
@@ -78,8 +77,8 @@ export async function GET(req: NextRequest) {
         const subjectaltname = cert.subjectaltname || '';
         const sans = subjectaltname
           .split(',')
-          .map((s) => s.trim().replace('DNS:', ''))
-          .filter((s) => s.length > 0);
+          .map((s: string) => s.trim().replace('DNS:', ''))
+          .filter((s: string) => s.length > 0);
 
         const responseData: SslCheckResponse = {
           isValid: isAuthorized,
@@ -108,10 +107,11 @@ export async function GET(req: NextRequest) {
         resolve(NextResponse.json(responseData));
       });
 
-      socket.on('error', (err) => {
+      socket.on('error', (err: Error) => {
         if (!isResolved) {
           isResolved = true;
           clearTimeout(timeoutId);
+          // If the error is SSL related, it implies the certificate is invalid/untrusted
           resolve(NextResponse.json({ error: `Connection failed: ${err.message}` }, { status: 500 }));
         }
       });
