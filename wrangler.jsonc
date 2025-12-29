@@ -76,5 +76,11 @@
       "binding": "WORKER_SELF_REFERENCE",
       "service": "nn"
     }
+  ],
+"secrets_store": [
+    {
+      "binding": "SECRETS", // This exposes 'env.SECRETS' to your code
+      "id": "a3d5a08dcd894e6e945376ecb8104a17" // Get this from Cloudflare Dashboard > Secrets Store
+    }
   ]
 }
