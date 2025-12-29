@@ -88,6 +88,9 @@ const CurlTool = dynamic(() => import('@/components/tools/dev/CurlTool'), {
 const TestAgent = dynamic(() => import('@/components/tools/browser/TestAgent'), {
   loading: () => <ToolLoader name="Test Agent" />,
 });
+const ImageGenerator = dynamic(() => import('@/components/tools/ai/ImageGenerator'), {
+  loading: () => <ToolLoader name="Flux AI" />,
+});
 const Screenshot = dynamic(() => import('@/components/tools/browser/Screenshot'), {
   loading: () => <ToolLoader name="Screenshot" />,
 });
@@ -104,6 +107,15 @@ export const tools: Tool[] = [
     icon: CreditCard,
     keywords: ['bin', 'credit card', 'bank', 'lookup'],
     component: BinChecker,
+  },
+	{
+    slug: 'flux-image-gen',
+    name: 'Flux 2 Creator',
+    description: 'Next-gen image synthesis using the Flux 2 [dev] model with automated prompt enhancement.',
+    category: 'ai',
+    icon: ImageIcon,
+    keywords: ['ai', 'flux', 'image', 'generator', 'art', 'dev'],
+    component: ImageGenerator,
   },
 	{
     slug: 'ssn-generator',
