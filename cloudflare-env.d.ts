@@ -5,6 +5,7 @@ declare namespace Cloudflare {
 	interface Env {
 		// Environment Variables
 		NEXTJS_ENV: string;
+		DEEPGRAM_API_KEY?: string; // Add this line
 
 		// 1. Assets & Observability
 		ASSETS: Fetcher;
@@ -16,17 +17,22 @@ declare namespace Cloudflare {
 		MY_FILES: R2Bucket;
 
 		// 3. AI & Browser Bindings
-		AI: any; // Using 'any' to prevent build errors if @cloudflare/workers-types isn't fully synced
-		MY_BROWSER: Fetcher; // Browser Rendering binding
+		AI: any; 
+		MY_BROWSER: Fetcher;
 
 		// 4. Media
-		IMAGES: Fetcher; // Cloudflare Images binding
+		IMAGES: Fetcher;
 
 		// 5. Security & Rate Limiting
-		RATE_LIMITER: any; // Rate Limit binding
+		RATE_LIMITER: any;
 
 		// 6. Internal Services
 		WORKER_SELF_REFERENCE: Fetcher;
+
+		// 7. Secrets Store (Add this block)
+		SECRETS?: {
+			get(name: string): Promise<string | null>;
+		};
 	}
 }
 interface CloudflareEnv extends Cloudflare.Env {}
