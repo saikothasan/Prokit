@@ -76,5 +76,9 @@
       "binding": "WORKER_SELF_REFERENCE",
       "service": "nn"
     }
-  ]
+  ],
+"services": [{
+    "binding": "WORKFLOW",
+    "service": "prompt-enhancer",
+ }]
 }
