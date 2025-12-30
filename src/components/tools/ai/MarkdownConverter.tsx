@@ -1,215 +1,297 @@
-import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from '@cloudflare/puppeteer';
-import { getCloudflareContext } from '@opennextjs/cloudflare';
+'use client';
 
-// export const runtime = 'edge';
+import React, { useState, useRef } from 'react';
+import { 
+  Search, 
+  Copy, 
+  Check, 
+  FileText, 
+  Settings, 
+  Sparkles, 
+  Upload, 
+  X, 
+  FileIcon,
+  Globe,
+  Loader2,
+  AlertCircle
+} from 'lucide-react';
 
-// --- Type Definitions for Workers AI Beta Features ---
-
-interface MarkdownConversionInput {
-  name?: string;
-  blob: Blob;
-}
-
-interface ConversionResult {
-  name: string;
-  format: 'markdown' | 'error';
-  mimetype: string;
-  tokens?: number;
+interface ConverterResponse {
+  success?: boolean;
   data?: string;
   error?: string;
 }
 
-// Extend the AI interface locally to support the beta toMarkdown method
-interface ExtendedAI {
-  run(model: string, inputs: unknown): Promise<unknown>;
-  toMarkdown(input: MarkdownConversionInput | MarkdownConversionInput[]): Promise<ConversionResult | ConversionResult[]>;
-}
+type Mode = 'url' | 'file';
 
-// --- Interfaces ---
+export default function MarkdownConverter() {
+  const [mode, setMode] = useState<Mode>('url');
+  
+  // URL Mode State
+  const [url, setUrl] = useState('');
+  
+  // File Mode State
+  const [files, setFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Shared State
+  const [result, setResult] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [enableFrontmatter, setEnableFrontmatter] = useState(true);
 
-interface MarkdownRequestBody {
-  url: string;
-  enableFrontmatter?: boolean;
-}
+  // --- Handlers ---
 
-interface AiModelResponse {
-  response?: string;
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const { env } = getCloudflareContext();
-    const contentType = req.headers.get('content-type') || '';
-    const ai = env.AI as unknown as ExtendedAI;
-
-    // ---------------------------------------------------------
-    // SCENARIO 1: File Upload (Multipart Form Data)
-    // Uses Workers AI `toMarkdown` feature
-    // ---------------------------------------------------------
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const files = formData.getAll('files') as File[];
-      const enableFrontmatter = formData.get('enableFrontmatter') === 'true';
-      
-      if (!files || files.length === 0) {
-        return NextResponse.json({ error: 'No files provided' }, { status: 400 });
-      }
-
-      // Map files to the format expected by env.AI.toMarkdown
-      const inputs: MarkdownConversionInput[] = files.map(file => ({
-        name: file.name,
-        blob: file
-      }));
-
-      // Call the Workers AI Beta Endpoint
-      let results: ConversionResult | ConversionResult[];
-      try {
-        results = await ai.toMarkdown(inputs);
-      } catch (err) {
-        console.error("Workers AI toMarkdown failed:", err);
-        return NextResponse.json({ error: "Markdown conversion failed. Ensure your Workers AI binding is updated." }, { status: 500 });
-      }
-
-      // Normalize results to array
-      const resultsArray = Array.isArray(results) ? results : [results];
-      
-      let combinedMarkdown = '';
-
-      resultsArray.forEach((res) => {
-        if (res.format === 'markdown' && res.data) {
-          if (enableFrontmatter) {
-             const d = new Date().toISOString().split('T')[0];
-             combinedMarkdown += `---
-filename: "${res.name}"
-mimetype: "${res.mimetype}"
-date: "${d}"
-tokens: ${res.tokens || 0}
----
-
-`;
-          }
-          combinedMarkdown += res.data + '\n\n---\n\n';
-        } else if (res.format === 'error') {
-          combinedMarkdown += `> **Error converting ${res.name}:** ${res.error}\n\n`;
-        }
-      });
-
-      return NextResponse.json({ success: true, data: combinedMarkdown.trim() });
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFiles(Array.from(e.target.files));
     }
+  };
 
-    // ---------------------------------------------------------
-    // SCENARIO 2: URL Scraping (JSON)
-    // Uses Puppeteer + LLM
-    // ---------------------------------------------------------
-    else {
-      const { url, enableFrontmatter = true } = (await req.json()) as MarkdownRequestBody;
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
-      if (!env.MY_BROWSER || !env.AI) {
-        return NextResponse.json({ error: 'Missing Browser or AI binding' }, { status: 500 });
-      }
+  const handleConvert = async () => {
+    if (mode === 'url' && !url) return;
+    if (mode === 'file' && files.length === 0) return;
 
-      // 1. Session Management
-      let browser;
-      let sessionId;
+    setLoading(true);
+    setResult('');
+    
+    try {
+      let res;
       
-      try {
-          const sessions = await puppeteer.sessions(env.MY_BROWSER);
-          const freeSessions = sessions.filter((s) => !s.connectionId);
-          const firstSession = freeSessions[0];
-          if (firstSession) {
-              sessionId = firstSession.sessionId;
-              browser = await puppeteer.connect(env.MY_BROWSER, sessionId);
-          }
-      } catch (e) {
-          console.warn('Failed to reuse session:', e);
+      if (mode === 'url') {
+        // URL Mode: Send JSON
+        res = await fetch('/api/ai-markdown', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            url,
+            enableFrontmatter
+          }),
+        });
+      } else {
+        // File Mode: Send FormData
+        const formData = new FormData();
+        files.forEach(file => {
+          formData.append('files', file);
+        });
+        formData.append('enableFrontmatter', String(enableFrontmatter));
+
+        res = await fetch('/api/ai-markdown', {
+          method: 'POST',
+          body: formData,
+        });
       }
 
-      if (!browser) {
-          browser = await puppeteer.launch(env.MY_BROWSER, { keep_alive: 60000 });
+      const data = (await res.json()) as ConverterResponse;
+
+      if (data.success) {
+        setResult(data.data || '');
+      } else {
+        setResult(`Error: ${data.error}`);
       }
+    } catch (err) {
+      console.error('Conversion request failed:', err);
+      setResult('Failed to connect to the server.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // 2. Scraping
-      const page = await browser.newPage();
-      await page.setViewport({ width: 1280, height: 800 });
-      
-      // Optimize loading
-      await page.setRequestInterception(true);
-      page.on('request', (req) => {
-          if (['image', 'font', 'stylesheet', 'media'].includes(req.resourceType())) {
-              req.abort();
-          } else {
-              req.continue();
-          }
-      });
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(result);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  return (
+    <div className="space-y-6">
+      {/* Mode Switcher */}
+      <div className="flex p-1 bg-gray-100 dark:bg-gray-800 rounded-lg w-fit">
+        <button
+          onClick={() => setMode('url')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+            mode === 'url' 
+              ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Globe className="w-4 h-4" />
+          Web URL
+        </button>
+        <button
+          onClick={() => setMode('file')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
+            mode === 'file' 
+              ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm' 
+              : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
+          }`}
+        >
+          <Upload className="w-4 h-4" />
+          File Upload
+        </button>
+      </div>
 
-      const pageData = await page.evaluate(() => {
-          const getMeta = (name: string) => document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || '';
-          const getProp = (prop: string) => document.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') || '';
+      {/* Input Section */}
+      <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        
+        {/* URL Input */}
+        {mode === 'url' && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://example.com/article"
+              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            />
+          </div>
+        )}
+
+        {/* File Input */}
+        {mode === 'file' && (
+          <div className="space-y-4">
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl p-8 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer text-center group"
+            >
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden"
+                multiple
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.html,.xml,.docx"
+                onChange={handleFileChange}
+              />
+              <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/20 text-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Upload className="w-6 h-6" />
+              </div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                Click to upload files
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                Supports PDF, Images, HTML, XML, DOCX
+              </p>
+            </div>
+
+            {/* File List */}
+            {files.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {files.map((file, i) => (
+                  <div key={i} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 group">
+                    <div className="w-8 h-8 rounded bg-white dark:bg-black flex items-center justify-center text-gray-400 shrink-0">
+                      <FileIcon className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{file.name}</p>
+                      <p className="text-xs text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button 
+                      onClick={() => removeFile(i)}
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Action Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+          {/* Options */}
+          <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md">
+                <Settings className="w-3 h-3" />
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input 
+                        type="checkbox" 
+                        checked={enableFrontmatter}
+                        onChange={(e) => setEnableFrontmatter(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    Include Metadata
+                </label>
+            </div>
+          </div>
+
+          {/* Convert Button */}
+          <button
+            onClick={handleConvert}
+            disabled={loading || (mode === 'url' ? !url : files.length === 0)}
+            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 font-medium transition-all hover:shadow-lg hover:shadow-blue-500/25 flex items-center gap-2 ml-auto"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Convert to Markdown</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Result Section */}
+      {result && (
+        <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="absolute right-4 top-4 z-10">
+            <button
+              onClick={copyToClipboard}
+              className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-all text-xs font-medium"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3 text-green-500" />
+                  <span className="text-green-600">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3 text-gray-500" />
+                  <span>Copy Markdown</span>
+                </>
+              )}
+            </button>
+          </div>
           
-          return {
-              content: document.body.innerHTML.slice(0, 15000), // Truncate for LLM limit
-              metadata: {
-                  title: document.title || '',
-                  description: getMeta('description') || getProp('og:description'),
-                  keywords: getMeta('keywords'),
-                  author: getMeta('author') || getProp('article:author'),
-                  image: getProp('og:image'),
-                  url: window.location.href,
-              }
-          };
-      });
+          <div className="relative">
+            <div className="absolute top-0 left-0 px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-tl-xl rounded-br-xl text-xs font-mono text-gray-500 uppercase tracking-wider">
+                Markdown Output
+            </div>
+            <div className="p-6 pt-12 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl min-h-[300px] max-h-[600px] overflow-auto whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-800 dark:text-gray-300 custom-scrollbar">
+                {result}
+            </div>
+          </div>
+        </div>
+      )}
 
-      await page.close();
-      // Don't close browser if we want to reuse session logic via keep_alive, 
-      // but strictly we should disconnect to release the connection for re-use.
-      browser.disconnect(); 
+      {/* Empty State */}
+      {!result && !loading && (
+        <div className="text-center py-12 text-gray-400 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-800">
+            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <p className="font-medium">Ready to convert</p>
+            <p className="text-sm opacity-60 mt-1">
+              {mode === 'url' 
+                ? 'Enter a URL above to extract content as Markdown.' 
+                : 'Upload images, PDFs, or documents to convert them.'}
+            </p>
+        </div>
+      )}
 
-      // 3. AI Conversion (Llama 3)
-      const systemPrompt = `You are an expert SEO Content Converter. 
-      Convert the HTML to clean Markdown.
-      - Use # H1, ## H2.
-      - Format links [text](url).
-      - Remove nav/footer noise.
-      - Output ONLY Markdown.`;
-
-      const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `HTML:\n${pageData.content}` }
-        ]
-      });
-
-      const aiResult = response as unknown as AiModelResponse;
-      let markdown = aiResult.response || "Failed to generate markdown.";
-
-      if (enableFrontmatter) {
-          const d = new Date().toISOString().split('T')[0];
-          const { title, description, keywords, author, image, url: pageUrl } = pageData.metadata;
-          const safe = (str: string) => (str || '').replace(/"/g, '\\"');
-
-          const frontmatter = `---
-title: "${safe(title)}"
-description: "${safe(description)}"
-keywords: "${safe(keywords)}"
-author: "${safe(author)}"
-date: "${d}"
-url: "${pageUrl}"
-image: "${image}"
----
-
-`;
-          markdown = frontmatter + markdown;
-      }
-
-      return NextResponse.json({ success: true, data: markdown });
-    }
-
-  } catch (error: unknown) {
-    console.error('Markdown Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
+      <div className="flex items-center gap-2 text-xs text-gray-400 justify-center mt-8">
+        <Sparkles className="w-3 h-3" />
+        <span>Powered by Cloudflare Workers AI & Browser Rendering</span>
+      </div>
+    </div>
+  );
 }
