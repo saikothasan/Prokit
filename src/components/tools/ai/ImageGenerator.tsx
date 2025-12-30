@@ -61,7 +61,8 @@ export default function ImageGenerator() {
         })
       });
       
-      const data = await res.json();
+      // FIX: Explicitly cast the JSON response to GenResponse
+      const data = (await res.json()) as GenResponse;
       
       if (data.success) {
         setResult(data);
