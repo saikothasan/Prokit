@@ -25,9 +25,6 @@ function isAiAudioResponse(data: unknown): data is AiAudioResponse {
   );
 }
 
-// Helper to sanitize keys for R2
-const generateKey = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
-
 export async function POST(req: NextRequest) {
   try {
     const { text, model, speaker, enhance } = (await req.json()) as TtsRequest;
@@ -117,52 +114,16 @@ export async function POST(req: NextRequest) {
        throw new Error("No audio generated");
     }
 
-    // 3. Store in R2
-    const fileKey = generateKey('tts');
-    await env.MY_FILES.put(fileKey, audioResponse);
-
-    return NextResponse.json({ 
-      success: true, 
-      id: fileKey,
-      url: `/api/tts?id=${fileKey}`
+    // 3. Return Audio Directly (No R2)
+    return new NextResponse(audioResponse, {
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Content-Disposition': `attachment; filename="speech-${Date.now()}.mp3"`,
+      },
     });
 
   } catch (error) {
     console.error('TTS Error:', error);
     return NextResponse.json({ error: 'Failed to generate speech' }, { status: 500 });
   }
-}
-
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get('id');
-
-  if (!id) {
-    return NextResponse.json({ error: 'Missing ID' }, { status: 400 });
-  }
-
-  const { env } = getCloudflareContext();
-  const object = await env.MY_FILES.get(id);
-
-  if (!object) {
-    return NextResponse.json({ error: 'File not found' }, { status: 404 });
-  }
-
-  const headers = new Headers();
-  
-  // Manually map metadata to avoid 'as any' casting on Headers
-  if (object.httpMetadata) {
-    if (object.httpMetadata.contentType) headers.set('Content-Type', object.httpMetadata.contentType);
-    if (object.httpMetadata.contentLanguage) headers.set('Content-Language', object.httpMetadata.contentLanguage);
-    if (object.httpMetadata.contentDisposition) headers.set('Content-Disposition', object.httpMetadata.contentDisposition);
-    if (object.httpMetadata.contentEncoding) headers.set('Content-Encoding', object.httpMetadata.contentEncoding);
-    if (object.httpMetadata.cacheControl) headers.set('Cache-Control', object.httpMetadata.cacheControl);
-  }
-  
-  if (object.httpEtag) headers.set('ETag', object.httpEtag);
-  
-  // Ensure strict content type
-  headers.set('Content-Type', 'audio/mpeg');
-
-  return new NextResponse(object.body, { headers });
 }
