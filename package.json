@@ -22,8 +22,6 @@
     "@giscus/react": "latest",
     "@cloudflare/puppeteer": "latest",
     "mimetext": "latest",
-    "@mistralai/mistralai": "latest",
-    "@deepgram/sdk": "latest",
     "speaker": "latest",
     "https-proxy-agent": "latest",
     "recharts": "latest",
