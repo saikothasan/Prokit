@@ -3,7 +3,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { 
   Sparkles, Download, Loader2, Image as ImageIcon, 
-  Wand2, Settings2, ChevronDown, ChevronUp, Layers 
+  Wand2, Settings2, ChevronDown, Layers 
 } from 'lucide-react';
 
 interface GenResponse {
@@ -12,7 +12,7 @@ interface GenResponse {
   finalPrompt: string;
   trace?: { step: string; result: string }[];
   error?: string;
-  params?: any;
+  params?: Record<string, string | number | undefined>;
 }
 
 const MODELS = [
@@ -68,7 +68,7 @@ export default function ImageGenerator() {
       } else {
         setError(data.error || 'Generation failed');
       }
-    } catch (e) {
+    } catch {
       setError('Network error occurred');
     } finally {
       setLoading(false);
@@ -258,7 +258,7 @@ export default function ImageGenerator() {
                    <div key={i} className="relative pl-4 border-l-2 border-purple-500">
                      <p className="text-[10px] text-purple-500 uppercase tracking-wider mb-1">Step {i+1}: {t.step}</p>
                      <p className="text-sm text-[var(--foreground)] italic leading-relaxed text-balance">
-                       "{t.result}"
+                       &quot;{t.result}&quot;
                      </p>
                    </div>
                  ))}
