@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Copy, RefreshCw, User, MapPin, Building, Check, Hash, 
   Globe, CreditCard, Wifi 
@@ -99,10 +99,14 @@ export default function FakeAddressGenerator() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  // Initial load
-  if (!data && !loading) {
-    generateAddress();
-  }
+  // Initial load - Moved to useEffect to avoid Server-Side Rendering execution
+  useEffect(() => {
+    if (!data) {
+      generateAddress();
+    }
+    // We only want to run this once on mount, or when requested manually.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
