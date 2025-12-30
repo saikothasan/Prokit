@@ -80,7 +80,8 @@ export default function ImageGenerator() {
     if (!result?.image) return;
     const link = document.createElement('a');
     link.href = `data:image/png;base64,${result.image}`;
-    link.download = `prokit-gen-${Date.now()}.png`;
+    // SEO: Filename includes keywords
+    link.download = `ai-generated-image-${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -97,12 +98,15 @@ export default function ImageGenerator() {
         {/* Header & Model Select */}
         <div className="flex flex-col md:flex-row justify-between gap-4">
           <div className="flex-1">
-            <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2 block">AI Model</label>
+            <label className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider mb-2 block">
+              Select AI Model
+            </label>
             <div className="relative">
               <select 
                 value={selectedModel}
                 onChange={(e) => setSelectedModel(e.target.value)}
                 className="w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--muted)]/50 appearance-none focus:ring-2 focus:ring-blue-500 outline-none font-medium"
+                aria-label="Select AI Image Generation Model"
               >
                 {MODELS.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
@@ -118,18 +122,21 @@ export default function ImageGenerator() {
              <button 
                onClick={() => setEnhance(!enhance)}
                className={`h-[46px] px-4 rounded-lg border flex items-center gap-2 font-medium transition-all ${enhance ? 'bg-purple-500/10 border-purple-500/50 text-purple-600 dark:text-purple-400' : 'bg-[var(--muted)] border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+               title="Automatically improve your prompt for better AI image results"
              >
                <Wand2 size={16} />
-               {enhance ? 'Enhancer: ON' : 'Enhancer: OFF'}
+               {enhance ? 'AI Enhancer: ON' : 'AI Enhancer: OFF'}
              </button>
           </div>
         </div>
 
         {/* Prompt Input */}
         <div className="relative">
+          <label htmlFor="prompt-input" className="sr-only">Enter your text-to-image prompt</label>
           <textarea 
+            id="prompt-input"
             className="w-full h-32 p-4 rounded-xl border border-[var(--border)] bg-[var(--background)] focus:ring-2 focus:ring-blue-500 outline-none resize-none text-lg shadow-inner placeholder:text-[var(--muted-foreground)]/50"
-            placeholder="Describe your imagination... (e.g., A cyberpunk samurai standing in neon rain)"
+            placeholder="Enter a detailed text prompt to generate AI art... (e.g., A cyberpunk samurai standing in neon rain, cinematic lighting, 8k)"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
           />
@@ -137,7 +144,7 @@ export default function ImageGenerator() {
             <button 
               onClick={() => setShowSettings(!showSettings)}
               className={`p-2 rounded-lg border transition-colors ${showSettings ? 'bg-[var(--muted)] text-[var(--foreground)]' : 'border-transparent text-[var(--muted-foreground)] hover:bg-[var(--muted)]'}`}
-              title="Advanced Settings"
+              title="Advanced AI Generation Settings"
             >
               <Settings2 size={20} />
             </button>
@@ -147,7 +154,7 @@ export default function ImageGenerator() {
               className="px-6 py-2 bg-[var(--foreground)] text-[var(--background)] rounded-lg font-bold hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {loading ? <Loader2 className="animate-spin w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-              {loading ? 'Generating...' : 'Generate'}
+              {loading ? 'Generating Art...' : 'Generate Image'}
             </button>
           </div>
         </div>
@@ -163,20 +170,22 @@ export default function ImageGenerator() {
                   type="number" step="64" min="256" max="1536"
                   value={width} onChange={(e) => setWidth(Number(e.target.value))}
                   className="w-full p-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-sm"
-                  placeholder="W"
+                  placeholder="Width"
+                  aria-label="Image Width"
                 />
                 <span className="self-center text-[var(--muted-foreground)]">x</span>
                 <input 
                   type="number" step="64" min="256" max="1536"
                   value={height} onChange={(e) => setHeight(Number(e.target.value))}
                   className="w-full p-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-sm"
-                  placeholder="H"
+                  placeholder="Height"
+                  aria-label="Image Height"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[var(--muted-foreground)]">Steps ({steps})</label>
+              <label className="text-xs font-semibold text-[var(--muted-foreground)]">Inference Steps ({steps})</label>
               <input 
                 type="range" min="1" max="50" value={steps} 
                 onChange={(e) => setSteps(Number(e.target.value))}
@@ -185,11 +194,11 @@ export default function ImageGenerator() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-[var(--muted-foreground)]">Guidance ({guidance})</label>
+              <label className="text-xs font-semibold text-[var(--muted-foreground)]">Guidance Scale ({guidance})</label>
               <input 
                 type="range" min="1" max="20" step="0.5" value={guidance} 
                 onChange={(e) => setGuidance(Number(e.target.value))}
-                disabled={currentModelType === 'flux' && !selectedModel.includes('dev')} // Flux schnell typically ignores guidance
+                disabled={currentModelType === 'flux' && !selectedModel.includes('dev')} 
                 className="w-full h-2 bg-[var(--muted)] rounded-lg appearance-none cursor-pointer accent-[var(--foreground)] disabled:opacity-50"
               />
             </div>
@@ -200,7 +209,7 @@ export default function ImageGenerator() {
                 type="number" 
                 value={seed || ''} 
                 onChange={(e) => setSeed(e.target.value ? Number(e.target.value) : undefined)}
-                placeholder="Random"
+                placeholder="Random Seed"
                 className="w-full p-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-sm"
               />
             </div>
@@ -212,7 +221,7 @@ export default function ImageGenerator() {
                   type="text" 
                   value={negativePrompt} 
                   onChange={(e) => setNegativePrompt(e.target.value)}
-                  placeholder="What to exclude (e.g. blurry, deformed, ugly)"
+                  placeholder="What to exclude (e.g. blurry, deformed, ugly, low quality)"
                   className="w-full p-2 rounded-md border border-[var(--border)] bg-[var(--background)] text-sm"
                 />
               </div>
@@ -236,13 +245,13 @@ export default function ImageGenerator() {
              <div className="p-5 rounded-xl border border-[var(--border)] bg-[var(--muted)]/30">
                <h3 className="text-xs font-mono font-semibold uppercase text-[var(--muted-foreground)] mb-3 flex items-center gap-2">
                  <Layers size={14} />
-                 Enhancement Chain
+                 Prompt Enhancement
                </h3>
                
                <div className="space-y-6">
                  {/* Original */}
                  <div className="relative pl-4 border-l-2 border-[var(--border)]">
-                   <p className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Input</p>
+                   <p className="text-[10px] text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Original Input</p>
                    <p className="text-sm font-medium opacity-80">{prompt}</p>
                  </div>
 
@@ -250,7 +259,7 @@ export default function ImageGenerator() {
                  {loading && !result && (
                    <div className="relative pl-4 border-l-2 border-blue-500 animate-pulse">
                      <p className="text-[10px] text-blue-500 uppercase tracking-wider mb-1">AI Processing</p>
-                     <p className="text-sm">Refining prompt logic...</p>
+                     <p className="text-sm">Optimizing prompt for visual quality...</p>
                    </div>
                  )}
 
@@ -280,8 +289,8 @@ export default function ImageGenerator() {
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-lg mb-1">Synthesizing Image...</h3>
-                  <p className="text-sm text-[var(--muted-foreground)]">Running {MODELS.find(m => m.id === selectedModel)?.name} on Cloudflare</p>
+                  <h3 className="font-semibold text-lg mb-1">Generating AI Image...</h3>
+                  <p className="text-sm text-[var(--muted-foreground)]">Running {MODELS.find(m => m.id === selectedModel)?.name} on Cloudflare Workers AI</p>
                 </div>
               </div>
             ) : result?.image ? (
@@ -289,7 +298,8 @@ export default function ImageGenerator() {
                 <div className="relative w-full h-full min-h-[500px] flex items-center justify-center bg-[url('/grid-pattern.svg')]">
                   <Image 
                     src={`data:image/png;base64,${result.image}`} 
-                    alt="AI Generated" 
+                    // SEO KEY: Use the prompt as the alt text for better indexing
+                    alt={result.finalPrompt || prompt || "AI Generated Image"}
                     width={width}
                     height={height}
                     className="max-w-full max-h-[80vh] object-contain shadow-2xl rounded-lg"
@@ -309,7 +319,8 @@ export default function ImageGenerator() {
             ) : (
               <div className="text-[var(--muted-foreground)] flex flex-col items-center gap-3 opacity-50 select-none">
                 <ImageIcon className="w-16 h-16 stroke-1" />
-                <p className="font-mono text-sm">READY TO GENERATE</p>
+                <p className="font-mono text-sm">AI IMAGE GENERATOR READY</p>
+                <p className="text-xs max-w-xs text-center">Enter a prompt above to create high-quality AI art using state-of-the-art diffusion models.</p>
               </div>
             )}
           </div>
