@@ -12,8 +12,7 @@ import {
   X, 
   FileIcon,
   Globe,
-  Loader2,
-  AlertCircle
+  Loader2
 } from 'lucide-react';
 
 interface ConverterResponse {
@@ -290,7 +289,7 @@ export default function MarkdownConverter() {
 
       <div className="flex items-center gap-2 text-xs text-gray-400 justify-center mt-8">
         <Sparkles className="w-3 h-3" />
-        <span>Powered by Cloudflare Workers AI & Browser Rendering</span>
+        <span>Powered by Prokit</span>
       </div>
     </div>
   );
