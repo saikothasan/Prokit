@@ -24,12 +24,6 @@ interface Voice {
   flag: string;
 }
 
-// Define the expected API response structure
-interface TTSResponse {
-  url?: string;
-  error?: string;
-}
-
 const VOICES: Voice[] = [
   // --- Deepgram Aura 2 (Workers AI) ---
   { id: 'aura-2-luna', model: '@cf/deepgram/aura-2-en', speaker: 'luna', name: 'Luna (Aura 2)', lang: 'English (US)', gender: 'Female', traits: ['Soft', 'Young'], flag: '🇺🇸' },
@@ -66,10 +60,9 @@ export default function TextToSpeech() {
   const handleGenerate = async () => {
     if (!text) return;
     
-    // Reset state
+    // Reset state: Revoke old URL if it exists to prevent memory leaks
     if (audioUrl) {
-       // Check if it's a blob url to revoke, though now we might use server URLs
-       if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+       URL.revokeObjectURL(audioUrl);
     }
     setAudioUrl(null);
     setIsPlaying(false);
@@ -89,20 +82,18 @@ export default function TextToSpeech() {
 
       if (!res.ok) throw new Error('Generation failed');
 
-      // Fix: Cast the response to the interface to satisfy TypeScript strict mode
-      const data = (await res.json()) as TTSResponse;
+      // Process as Blob instead of JSON
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
       
-      if (data.url) {
-        setAudioUrl(data.url);
-        
-        // Auto-play on success
-        setTimeout(() => {
-          if (audioRef.current) {
-            audioRef.current.play().catch(() => {});
-            setIsPlaying(true);
-          }
-        }, 100);
-      }
+      // Auto-play on success
+      setTimeout(() => {
+        if (audioRef.current) {
+          audioRef.current.play().catch(() => {});
+          setIsPlaying(true);
+        }
+      }, 100);
 
     } catch (e) {
       console.error(e);
@@ -129,7 +120,7 @@ export default function TextToSpeech() {
         <h2 className="text-2xl font-bold tracking-tight">AI Voice Studio</h2>
         <p className="text-muted-foreground">
           Convert text to lifelike speech using Cloudflare Workers AI (Aura-2 & MeloTTS).
-          Includes automated prompt enhancement and R2 storage.
+          Includes automated prompt enhancement.
         </p>
       </div>
 
