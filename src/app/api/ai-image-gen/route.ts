@@ -1,72 +1,173 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
+// export const runtime = 'edge';
+
+// --- Type Definitions ---
 interface ImageGenRequest {
   prompt: string;
-  useEnhancer: boolean;
+  modelId?: string;
+  useEnhancer?: boolean;
+  settings?: {
+    negativePrompt?: string;
+    numSteps?: number;
+    guidanceScale?: number;
+    seed?: number;
+    width?: number;
+    height?: number;
+  };
+  gatewayId?: string; // Optional: Pass gateway ID from client or env
 }
+
+// --- Model Configuration ---
+const MODEL_CONFIGS: Record<string, any> = {
+  '@cf/black-forest-labs/flux-1-schnell': {
+    type: 'flux',
+    defaults: { num_steps: 4, width: 1024, height: 768 }
+  },
+  '@cf/black-forest-labs/flux-1-dev': { // Assuming standard dev or use user's flux-2 if strictly needed
+    type: 'flux',
+    defaults: { num_steps: 20, guidance: 7.5, width: 1024, height: 768 }
+  },
+  '@cf/stabilityai/stable-diffusion-xl-base-1.0': {
+    type: 'sdxl',
+    defaults: { num_steps: 30, guidance: 7.5, width: 1024, height: 1024 }
+  },
+  '@cf/bytedance/stable-diffusion-xl-lightning': {
+    type: 'sdxl-lightning',
+    defaults: { num_steps: 4, width: 1024, height: 1024 }
+  },
+  '@cf/lykon/dreamshaper-8-lcm': {
+    type: 'sdxl-lcm',
+    defaults: { num_steps: 8, guidance: 1.5, width: 768, height: 768 }
+  }
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt, useEnhancer = true } = (await req.json()) as ImageGenRequest;
+    const { 
+      prompt, 
+      modelId = '@cf/black-forest-labs/flux-1-schnell', 
+      useEnhancer = true, 
+      settings = {},
+      gatewayId 
+    } = (await req.json()) as ImageGenRequest;
 
     if (!prompt) {
       return NextResponse.json({ error: 'Missing prompt' }, { status: 400 });
     }
 
     const { env } = getCloudflareContext();
-    let finalPrompt = prompt;
-    let enhanced = false;
+    
+    // --- 1. CONFIGURATION & AI GATEWAY ---
+    // Use the provided gatewayId or fallback to a known environment variable/string if available
+    // The binding option { gateway: { id: ... } } enables the AI Gateway
+    const runOptions = gatewayId ? { gateway: { id: gatewayId, skipCache: false } } : {};
 
-    // --- STEP 1: PROMPT ENHANCEMENT (Chain Node 1) ---
-    // If enabled, we feed the raw input into an LLM to generate a detailed description.
+    let finalPrompt = prompt;
+    let enhancementTrace = [];
+
+    // --- 2. MULTI-STEP PROMPT ENHANCEMENT ---
     if (useEnhancer) {
       try {
-        const enhanceResponse = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        const enhancerModel = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'; // Powerful model for logic
+
+        // Step 2.1: Expansion & Detail
+        const expansionResponse = await env.AI.run(enhancerModel, {
           messages: [
             { 
               role: 'system', 
-              content: `You are an expert AI image prompt engineer. Your task is to take a short, simple user concept and expand it into a detailed, high-quality prompt suitable for the FLUX.2 diffusion model. 
-              Focus on: Lighting, Texture, Camera Angle, Composition, and Artistic Style. 
-              Do not add conversational filler. Output ONLY the enhanced prompt text.` 
+              content: `You are an expert visual prompt engineer. Analyze the user's short request.
+              Expand it into a rich visual description focusing on: Lighting, Texture, Camera Angle, and Atmosphere.
+              Keep it under 3 sentences. Output ONLY the description.` 
             },
             { role: 'user', content: prompt }
           ]
-        }) as { response: string };
+        }, runOptions) as { response: string };
+        
+        const expandedPrompt = expansionResponse?.response || prompt;
+        enhancementTrace.push({ step: 'Expansion', result: expandedPrompt });
 
-        if (enhanceResponse?.response) {
-          finalPrompt = enhanceResponse.response;
-          enhanced = true;
+        // Step 2.2: Stylization & Model Optimization (Chain of Thought)
+        const optimizationResponse = await env.AI.run(enhancerModel, {
+          messages: [
+            { 
+              role: 'system', 
+              content: `You are optimizing a prompt for an AI Image Generator (${modelId}).
+              Take the provided description and format it strictly as a comma-separated list of tags and phrases.
+              Include technical keywords (e.g., "8k resolution", "cinematic lighting", "photorealistic").
+              Output ONLY the final prompt string.` 
+            },
+            { role: 'user', content: expandedPrompt }
+          ]
+        }, runOptions) as { response: string };
+
+        if (optimizationResponse?.response) {
+          finalPrompt = optimizationResponse.response;
+          enhancementTrace.push({ step: 'Optimization', result: finalPrompt });
         }
       } catch (e) {
-        console.warn('Prompt enhancement failed, falling back to raw prompt:', e);
+        console.warn('Enhancement failed, using raw prompt:', e);
+        enhancementTrace.push({ step: 'Error', result: 'Enhancement skipped due to timeout/error' });
       }
     }
 
-    // --- STEP 2: IMAGE GENERATION (Chain Node 2) ---
-    // We use the FLUX.2 [dev] model. 
-    // Note: Flux 2 often requires specific parameter tuning for best results.
-    const imageResponse = await env.AI.run('@cf/black-forest-labs/flux-2-dev', {
-      prompt: finalPrompt,
-      num_steps: 25,     // Higher steps for "dev" model quality
-      guidance: 7.5,     // Standard guidance scale
-      width: 1024,
-      height: 768,
-      output_format: 'png'
-    }) as { image: string };
+    // --- 3. MODEL PREPARATION ---
+    const config = MODEL_CONFIGS[modelId] || MODEL_CONFIGS['@cf/black-forest-labs/flux-1-schnell'];
+    
+    // Map generic settings to model-specific inputs
+    let inputs: any = { prompt: finalPrompt };
+    
+    // Merge defaults with user settings
+    const width = settings.width || config.defaults.width;
+    const height = settings.height || config.defaults.height;
+    const steps = settings.numSteps || config.defaults.num_steps;
+    const seed = settings.seed || Math.floor(Math.random() * 1000000);
+
+    if (config.type === 'flux') {
+      // Flux Inputs
+      inputs = {
+        prompt: finalPrompt,
+        num_steps: steps,
+        width,
+        height,
+        // seed is sometimes supported depending on exact version/shim
+        seed, 
+      };
+      // Add guidance only if supported (Flux Schnell typically doesn't use it, Dev does)
+      if (modelId.includes('dev')) {
+        inputs.guidance = settings.guidanceScale || config.defaults.guidance;
+      }
+    } else {
+      // Stable Diffusion Inputs
+      inputs = {
+        prompt: finalPrompt,
+        negative_prompt: settings.negativePrompt || 'blurry, low quality, distorted, ugly, watermark',
+        num_steps: steps,
+        width,
+        height,
+        guidance: settings.guidanceScale || config.defaults.guidance,
+        seed,
+      };
+    }
+
+    // --- 4. GENERATION ---
+    const imageResponse = await env.AI.run(modelId, inputs, runOptions) as { image: string };
 
     return NextResponse.json({
       success: true,
-      image: imageResponse.image, // Base64 string
+      image: imageResponse.image, // Base64
       originalPrompt: prompt,
       finalPrompt: finalPrompt,
-      isEnhanced: enhanced
+      trace: enhancementTrace,
+      modelUsed: modelId,
+      params: inputs
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('AI Image Gen Error:', error);
     return NextResponse.json(
-      { error: 'Generation failed. The model might be busy or warming up.' }, 
+      { error: error.message || 'Generation failed' }, 
       { status: 500 }
     );
   }
