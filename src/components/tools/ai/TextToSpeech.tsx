@@ -24,6 +24,12 @@ interface Voice {
   flag: string;
 }
 
+// Define the expected API response structure
+interface TTSResponse {
+  url?: string;
+  error?: string;
+}
+
 const VOICES: Voice[] = [
   // --- Deepgram Aura 2 (Workers AI) ---
   { id: 'aura-2-luna', model: '@cf/deepgram/aura-2-en', speaker: 'luna', name: 'Luna (Aura 2)', lang: 'English (US)', gender: 'Female', traits: ['Soft', 'Young'], flag: '🇺🇸' },
@@ -83,7 +89,9 @@ export default function TextToSpeech() {
 
       if (!res.ok) throw new Error('Generation failed');
 
-      const data = await res.json();
+      // Fix: Cast the response to the interface to satisfy TypeScript strict mode
+      const data = (await res.json()) as TTSResponse;
+      
       if (data.url) {
         setAudioUrl(data.url);
         
