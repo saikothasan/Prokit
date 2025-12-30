@@ -24,8 +24,6 @@
     "mimetext": "latest",
     "@mistralai/mistralai": "latest",
     "@deepgram/sdk": "latest",
-    "@cloudflare/ai-gateway": "latest",
-    "ssl-checker": "latest",
     "speaker": "latest",
     "https-proxy-agent": "latest",
     "recharts": "latest",
