@@ -5,9 +5,24 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 interface TtsRequest {
   text: string;
-  model: string; // e.g., '@cf/deepgram/aura-2-en'
-  speaker?: string; // e.g., 'luna'
+  model: string;
+  speaker?: string;
   enhance?: boolean;
+}
+
+// Define the expected structure for Base64 audio responses
+interface AiAudioResponse {
+  audio: string;
+}
+
+// Type guard to safely check for Base64 audio response
+function isAiAudioResponse(data: unknown): data is AiAudioResponse {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'audio' in data &&
+    typeof (data as AiAudioResponse).audio === 'string'
+  );
 }
 
 // Helper to sanitize keys for R2
@@ -45,8 +60,9 @@ export async function POST(req: NextRequest) {
           max_tokens: 512,
         });
         
-        if (aiResponse && 'response' in aiResponse) {
-             processedText = aiResponse.response || text;
+        // Safely access the response without 'any'
+        if (aiResponse && typeof aiResponse === 'object' && 'response' in aiResponse) {
+             processedText = (aiResponse as { response: string }).response || text;
         }
       } catch (err) {
         console.warn('Enhancement failed, using original text:', err);
@@ -57,51 +73,36 @@ export async function POST(req: NextRequest) {
     let audioResponse: Blob | null = null;
 
     if (model.includes('deepgram')) {
-       // Deepgram Aura on Workers AI
-       // Schema: { text: string, speaker?: string }
-       // Valid speakers for aura-2-en: asterisk, luna, stella, athena, etc.
-       const inputs: any = { text: processedText };
+       const inputs: { text: string; speaker?: string } = { text: processedText };
        if (speaker) inputs.speaker = speaker;
        
-       const response = await env.AI.run(model as any, inputs);
+       // Cast to specific model literal to satisfy strict typing
+       const response = await env.AI.run(model as '@cf/deepgram/aura-2-en', inputs);
        
-       // Workers AI returns a response with a body stream or base64 depending on the model/binding version.
-       // The `run` method for binary outputs usually returns a ReadableStream or ArrayBuffer in some bindings, 
-       // but strictly typed it might return { audio: number[] } or similar.
-       // However, for standard fetch-based usage it returns a Response. 
-       // When using the binding `env.AI.run`, it typically returns an object. 
-       // For TTS, it often returns a ReadableStream (if using raw) or base64.
-       // Let's assume it returns a standard response object or we handle the specific output type.
-       // Based on docs: output is often `ReadableStream` for binary types in recent versions.
-       
-       // Handle different potential return types from the AI binding safely
        if (response instanceof ReadableStream) {
          audioResponse = await new Response(response).blob();
        } else if (response instanceof Response) {
          audioResponse = await response.blob();
-       } else if ((response as any).audio) {
-          // If base64
-          const binaryString = atob((response as any).audio);
+       } else if (isAiAudioResponse(response)) {
+          const binaryString = atob(response.audio);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
           }
           audioResponse = new Blob([bytes], { type: 'audio/mpeg' });
        } else {
-          // Fallback for direct byte array
-          audioResponse = new Blob([response as any], { type: 'audio/mpeg' });
+          // Safe fallback for unknown blob-compatible types
+          audioResponse = new Blob([response as BlobPart], { type: 'audio/mpeg' });
        }
 
     } else if (model.includes('melotts')) {
-      // MeloTTS
-      // Schema: { prompt: string, lang: string }
        const response = await env.AI.run('@cf/myshell-ai/melotts', {
          prompt: processedText,
-         lang: 'en' // Defaulting to English for now, as Melo mainly supports EN well
+         lang: 'en'
        });
        
-       if ((response as any).audio) {
-          const binaryString = atob((response as any).audio);
+       if (isAiAudioResponse(response)) {
+          const binaryString = atob(response.audio);
           const bytes = new Uint8Array(binaryString.length);
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
@@ -120,7 +121,6 @@ export async function POST(req: NextRequest) {
     const fileKey = generateKey('tts');
     await env.MY_FILES.put(fileKey, audioResponse);
 
-    // 4. Return URL info
     return NextResponse.json({ 
       success: true, 
       id: fileKey,
@@ -133,7 +133,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET handler to serve the file from R2
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const id = searchParams.get('id');
@@ -150,8 +149,19 @@ export async function GET(req: NextRequest) {
   }
 
   const headers = new Headers();
-  object.writeHttpMetadata(headers as any);
-  headers.set('etag', object.httpEtag);
+  
+  // Manually map metadata to avoid 'as any' casting on Headers
+  if (object.httpMetadata) {
+    if (object.httpMetadata.contentType) headers.set('Content-Type', object.httpMetadata.contentType);
+    if (object.httpMetadata.contentLanguage) headers.set('Content-Language', object.httpMetadata.contentLanguage);
+    if (object.httpMetadata.contentDisposition) headers.set('Content-Disposition', object.httpMetadata.contentDisposition);
+    if (object.httpMetadata.contentEncoding) headers.set('Content-Encoding', object.httpMetadata.contentEncoding);
+    if (object.httpMetadata.cacheControl) headers.set('Cache-Control', object.httpMetadata.cacheControl);
+  }
+  
+  if (object.httpEtag) headers.set('ETag', object.httpEtag);
+  
+  // Ensure strict content type
   headers.set('Content-Type', 'audio/mpeg');
 
   return new NextResponse(object.body, { headers });
