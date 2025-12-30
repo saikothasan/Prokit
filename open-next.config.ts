@@ -11,7 +11,4 @@ export default defineCloudflareConfig({
     shouldLazilyUpdateOnCacheHit: true, // "Stale-While-Revalidate" behavior
     bypassTagCacheOnCacheHit: true, // Speed optimization
   }),
-
-  // From your request: specific static asset handling
-  enableCacheInterception: true,
 });
