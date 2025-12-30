@@ -19,13 +19,38 @@ interface ImageGenRequest {
   gatewayId?: string; // Optional: Pass gateway ID from client or env
 }
 
+interface ModelConfig {
+  type: 'flux' | 'sdxl' | 'sdxl-lightning' | 'sdxl-lcm';
+  defaults: {
+    num_steps: number;
+    width: number;
+    height: number;
+    guidance?: number;
+  };
+}
+
+interface ModelInputs {
+  prompt: string;
+  num_steps?: number;
+  width?: number;
+  height?: number;
+  guidance?: number;
+  seed?: number;
+  negative_prompt?: string;
+}
+
+interface EnhancementStep {
+  step: string;
+  result: string;
+}
+
 // --- Model Configuration ---
-const MODEL_CONFIGS: Record<string, any> = {
+const MODEL_CONFIGS: Record<string, ModelConfig> = {
   '@cf/black-forest-labs/flux-1-schnell': {
     type: 'flux',
     defaults: { num_steps: 4, width: 1024, height: 768 }
   },
-  '@cf/black-forest-labs/flux-1-dev': { // Assuming standard dev or use user's flux-2 if strictly needed
+  '@cf/black-forest-labs/flux-1-dev': {
     type: 'flux',
     defaults: { num_steps: 20, guidance: 7.5, width: 1024, height: 768 }
   },
@@ -60,17 +85,15 @@ export async function POST(req: NextRequest) {
     const { env } = getCloudflareContext();
     
     // --- 1. CONFIGURATION & AI GATEWAY ---
-    // Use the provided gatewayId or fallback to a known environment variable/string if available
-    // The binding option { gateway: { id: ... } } enables the AI Gateway
     const runOptions = gatewayId ? { gateway: { id: gatewayId, skipCache: false } } : {};
 
     let finalPrompt = prompt;
-    let enhancementTrace = [];
+    const enhancementTrace: EnhancementStep[] = [];
 
     // --- 2. MULTI-STEP PROMPT ENHANCEMENT ---
     if (useEnhancer) {
       try {
-        const enhancerModel = '@cf/meta/llama-3.3-70b-instruct-fp8-fast'; // Powerful model for logic
+        const enhancerModel = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
         // Step 2.1: Expansion & Detail
         const expansionResponse = await env.AI.run(enhancerModel, {
@@ -88,7 +111,7 @@ export async function POST(req: NextRequest) {
         const expandedPrompt = expansionResponse?.response || prompt;
         enhancementTrace.push({ step: 'Expansion', result: expandedPrompt });
 
-        // Step 2.2: Stylization & Model Optimization (Chain of Thought)
+        // Step 2.2: Stylization & Model Optimization
         const optimizationResponse = await env.AI.run(enhancerModel, {
           messages: [
             { 
@@ -115,14 +138,13 @@ export async function POST(req: NextRequest) {
     // --- 3. MODEL PREPARATION ---
     const config = MODEL_CONFIGS[modelId] || MODEL_CONFIGS['@cf/black-forest-labs/flux-1-schnell'];
     
-    // Map generic settings to model-specific inputs
-    let inputs: any = { prompt: finalPrompt };
-    
     // Merge defaults with user settings
     const width = settings.width || config.defaults.width;
     const height = settings.height || config.defaults.height;
     const steps = settings.numSteps || config.defaults.num_steps;
     const seed = settings.seed || Math.floor(Math.random() * 1000000);
+
+    let inputs: ModelInputs = { prompt: finalPrompt };
 
     if (config.type === 'flux') {
       // Flux Inputs
@@ -131,10 +153,8 @@ export async function POST(req: NextRequest) {
         num_steps: steps,
         width,
         height,
-        // seed is sometimes supported depending on exact version/shim
         seed, 
       };
-      // Add guidance only if supported (Flux Schnell typically doesn't use it, Dev does)
       if (modelId.includes('dev')) {
         inputs.guidance = settings.guidanceScale || config.defaults.guidance;
       }
@@ -164,10 +184,11 @@ export async function POST(req: NextRequest) {
       params: inputs
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Generation failed';
     console.error('AI Image Gen Error:', error);
     return NextResponse.json(
-      { error: error.message || 'Generation failed' }, 
+      { error: errorMessage }, 
       { status: 500 }
     );
   }
