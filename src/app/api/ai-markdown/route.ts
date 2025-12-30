@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from '@cloudflare/puppeteer';
 import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-export const runtime = 'edge';
+// Removed 'edge' runtime config to allow OpenNext to handle polyfills and Puppeteer dependencies
+// export const runtime = 'edge';
 
 // --- Type Definitions for Workers AI Beta Features ---
 
