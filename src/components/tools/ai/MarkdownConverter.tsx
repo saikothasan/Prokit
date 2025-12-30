@@ -1,151 +1,215 @@
-'use client';
+import { NextRequest, NextResponse } from 'next/server';
+import puppeteer from '@cloudflare/puppeteer';
+import { getCloudflareContext } from '@opennextjs/cloudflare';
 
-import React, { useState } from 'react';
-import { Search, Copy, Check, FileText, Settings, Sparkles } from 'lucide-react';
+// export const runtime = 'edge';
 
-interface ConverterResponse {
-  success?: boolean;
+// --- Type Definitions for Workers AI Beta Features ---
+
+interface MarkdownConversionInput {
+  name?: string;
+  blob: Blob;
+}
+
+interface ConversionResult {
+  name: string;
+  format: 'markdown' | 'error';
+  mimetype: string;
+  tokens?: number;
   data?: string;
   error?: string;
 }
 
-export default function MarkdownConverter() {
-  const [url, setUrl] = useState('');
-  const [result, setResult] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  
-  // Options
-  const [enableFrontmatter, setEnableFrontmatter] = useState(true);
+// Extend the AI interface locally to support the beta toMarkdown method
+interface ExtendedAI {
+  run(model: string, inputs: unknown): Promise<unknown>;
+  toMarkdown(input: MarkdownConversionInput | MarkdownConversionInput[]): Promise<ConversionResult | ConversionResult[]>;
+}
 
-  const handleConvert = async () => {
-    if (!url) return;
-    setLoading(true);
-    setResult('');
-    
-    try {
-      const res = await fetch('/api/ai-markdown', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          url,
-          enableFrontmatter
-        }),
+// --- Interfaces ---
+
+interface MarkdownRequestBody {
+  url: string;
+  enableFrontmatter?: boolean;
+}
+
+interface AiModelResponse {
+  response?: string;
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const { env } = getCloudflareContext();
+    const contentType = req.headers.get('content-type') || '';
+    const ai = env.AI as unknown as ExtendedAI;
+
+    // ---------------------------------------------------------
+    // SCENARIO 1: File Upload (Multipart Form Data)
+    // Uses Workers AI `toMarkdown` feature
+    // ---------------------------------------------------------
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      const files = formData.getAll('files') as File[];
+      const enableFrontmatter = formData.get('enableFrontmatter') === 'true';
+      
+      if (!files || files.length === 0) {
+        return NextResponse.json({ error: 'No files provided' }, { status: 400 });
+      }
+
+      // Map files to the format expected by env.AI.toMarkdown
+      const inputs: MarkdownConversionInput[] = files.map(file => ({
+        name: file.name,
+        blob: file
+      }));
+
+      // Call the Workers AI Beta Endpoint
+      let results: ConversionResult | ConversionResult[];
+      try {
+        results = await ai.toMarkdown(inputs);
+      } catch (err) {
+        console.error("Workers AI toMarkdown failed:", err);
+        return NextResponse.json({ error: "Markdown conversion failed. Ensure your Workers AI binding is updated." }, { status: 500 });
+      }
+
+      // Normalize results to array
+      const resultsArray = Array.isArray(results) ? results : [results];
+      
+      let combinedMarkdown = '';
+
+      resultsArray.forEach((res) => {
+        if (res.format === 'markdown' && res.data) {
+          if (enableFrontmatter) {
+             const d = new Date().toISOString().split('T')[0];
+             combinedMarkdown += `---
+filename: "${res.name}"
+mimetype: "${res.mimetype}"
+date: "${d}"
+tokens: ${res.tokens || 0}
+---
+
+`;
+          }
+          combinedMarkdown += res.data + '\n\n---\n\n';
+        } else if (res.format === 'error') {
+          combinedMarkdown += `> **Error converting ${res.name}:** ${res.error}\n\n`;
+        }
       });
 
-      const data = (await res.json()) as ConverterResponse;
-
-      if (data.success) {
-        setResult(data.data || '');
-      } else {
-        setResult(`Error: ${data.error}`);
-      }
-    } catch (err) {
-      console.error('Conversion request failed:', err);
-      setResult('Failed to connect to the server.');
-    } finally {
-      setLoading(false);
+      return NextResponse.json({ success: true, data: combinedMarkdown.trim() });
     }
-  };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(result);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    // ---------------------------------------------------------
+    // SCENARIO 2: URL Scraping (JSON)
+    // Uses Puppeteer + LLM
+    // ---------------------------------------------------------
+    else {
+      const { url, enableFrontmatter = true } = (await req.json()) as MarkdownRequestBody;
 
-  return (
-    <div className="space-y-6">
-      {/* Input Section */}
-      <div className="flex flex-col gap-4">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com/article"
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <button
-            onClick={handleConvert}
-            disabled={loading || !url}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 font-medium transition-colors flex items-center gap-2"
-          >
-            {loading ? (
-              <span className="animate-pulse">Analyzing...</span>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Convert</span>
-              </>
-            )}
-          </button>
-        </div>
+      if (!env.MY_BROWSER || !env.AI) {
+        return NextResponse.json({ error: 'Missing Browser or AI binding' }, { status: 500 });
+      }
 
-        {/* Options Toolbar */}
-        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-md">
-                <Settings className="w-3 h-3" />
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input 
-                        type="checkbox" 
-                        checked={enableFrontmatter}
-                        onChange={(e) => setEnableFrontmatter(e.target.checked)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    Include SEO Frontmatter
-                </label>
-            </div>
-        </div>
-      </div>
+      // 1. Session Management
+      let browser;
+      let sessionId;
+      
+      try {
+          const sessions = await puppeteer.sessions(env.MY_BROWSER);
+          const freeSessions = sessions.filter((s) => !s.connectionId);
+          const firstSession = freeSessions[0];
+          if (firstSession) {
+              sessionId = firstSession.sessionId;
+              browser = await puppeteer.connect(env.MY_BROWSER, sessionId);
+          }
+      } catch (e) {
+          console.warn('Failed to reuse session:', e);
+      }
 
-      {/* Result Section */}
-      {result && (
-        <div className="relative group animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="absolute right-4 top-4 z-10">
-            <button
-              onClick={copyToClipboard}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:bg-gray-50 transition-all text-xs font-medium"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3 h-3 text-green-500" />
-                  <span className="text-green-600">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3 text-gray-500" />
-                  <span>Copy Markdown</span>
-                </>
-              )}
-            </button>
-          </div>
+      if (!browser) {
+          browser = await puppeteer.launch(env.MY_BROWSER, { keep_alive: 60000 });
+      }
+
+      // 2. Scraping
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+      
+      // Optimize loading
+      await page.setRequestInterception(true);
+      page.on('request', (req) => {
+          if (['image', 'font', 'stylesheet', 'media'].includes(req.resourceType())) {
+              req.abort();
+          } else {
+              req.continue();
+          }
+      });
+
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+      const pageData = await page.evaluate(() => {
+          const getMeta = (name: string) => document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || '';
+          const getProp = (prop: string) => document.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') || '';
           
-          <div className="relative">
-            <div className="absolute top-0 left-0 px-4 py-2 bg-gray-200 dark:bg-gray-800 rounded-tl-xl rounded-br-xl text-xs font-mono text-gray-500">
-                MARKDOWN
-            </div>
-            <div className="p-6 pt-12 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl min-h-[300px] overflow-auto whitespace-pre-wrap font-mono text-sm leading-relaxed text-gray-800 dark:text-gray-300">
-                {result}
-            </div>
-          </div>
-        </div>
-      )}
+          return {
+              content: document.body.innerHTML.slice(0, 15000), // Truncate for LLM limit
+              metadata: {
+                  title: document.title || '',
+                  description: getMeta('description') || getProp('og:description'),
+                  keywords: getMeta('keywords'),
+                  author: getMeta('author') || getProp('article:author'),
+                  image: getProp('og:image'),
+                  url: window.location.href,
+              }
+          };
+      });
 
-      {!result && !loading && (
-        <div className="text-center py-12 text-gray-400">
-            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>Enter a URL to generate clean, SEO-ready Markdown.</p>
-        </div>
-      )}
+      await page.close();
+      // Don't close browser if we want to reuse session logic via keep_alive, 
+      // but strictly we should disconnect to release the connection for re-use.
+      browser.disconnect(); 
 
-      <div className="flex items-center gap-2 text-xs text-gray-400 justify-center mt-8">
-        <FileText className="w-3 h-3" />
-        <span>Powered by Cloudflare Browser Rendering & Llama 3</span>
-      </div>
-    </div>
-  );
+      // 3. AI Conversion (Llama 3)
+      const systemPrompt = `You are an expert SEO Content Converter. 
+      Convert the HTML to clean Markdown.
+      - Use # H1, ## H2.
+      - Format links [text](url).
+      - Remove nav/footer noise.
+      - Output ONLY Markdown.`;
+
+      const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `HTML:\n${pageData.content}` }
+        ]
+      });
+
+      const aiResult = response as unknown as AiModelResponse;
+      let markdown = aiResult.response || "Failed to generate markdown.";
+
+      if (enableFrontmatter) {
+          const d = new Date().toISOString().split('T')[0];
+          const { title, description, keywords, author, image, url: pageUrl } = pageData.metadata;
+          const safe = (str: string) => (str || '').replace(/"/g, '\\"');
+
+          const frontmatter = `---
+title: "${safe(title)}"
+description: "${safe(description)}"
+keywords: "${safe(keywords)}"
+author: "${safe(author)}"
+date: "${d}"
+url: "${pageUrl}"
+image: "${image}"
+---
+
+`;
+          markdown = frontmatter + markdown;
+      }
+
+      return NextResponse.json({ success: true, data: markdown });
+    }
+
+  } catch (error: unknown) {
+    console.error('Markdown Error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+  }
 }
