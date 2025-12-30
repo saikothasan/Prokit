@@ -6,16 +6,17 @@ import {
   Pause, 
   Download, 
   Loader2, 
-  // RefreshCw, // REMOVED
-  // Volume2,   // REMOVED
   Globe,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Wand2 // Icon for enhancement
 } from 'lucide-react';
 
 // Organized Voice Data with Flags and Metadata
 interface Voice {
-  id: string;
+  id: string; // Helper ID for UI
+  model: string; // Actual Worker AI Model ID
+  speaker?: string; // Speaker param for Aura
   name: string;
   lang: string;
   gender: 'Male' | 'Female';
@@ -24,27 +25,17 @@ interface Voice {
 }
 
 const VOICES: Voice[] = [
-  // --- English (US) ---
-  { id: 'aura-asteria-en', name: 'Asteria', lang: 'English (US)', gender: 'Female', traits: ['Standard', 'Confident'], flag: '🇺🇸' },
-  { id: 'aura-luna-en', name: 'Luna', lang: 'English (US)', gender: 'Female', traits: ['Soft', 'Young'], flag: '🇺🇸' },
-  { id: 'aura-stella-en', name: 'Stella', lang: 'English (US)', gender: 'Female', traits: ['Energetic', 'Narrative'], flag: '🇺🇸' },
-  { id: 'aura-athena-en', name: 'Athena', lang: 'English (UK)', gender: 'Female', traits: ['Professional', 'Calm'], flag: '🇬🇧' },
-  { id: 'aura-orion-en', name: 'Orion', lang: 'English (US)', gender: 'Male', traits: ['Deep', 'Narrative'], flag: '🇺🇸' },
-  { id: 'aura-arcas-en', name: 'Arcas', lang: 'English (US)', gender: 'Male', traits: ['Authoritative', 'News'], flag: '🇺🇸' },
-  { id: 'aura-perseus-en', name: 'Perseus', lang: 'English (US)', gender: 'Male', traits: ['Casual', 'Fast'], flag: '🇺🇸' },
-  { id: 'aura-angus-en', name: 'Angus', lang: 'English (Ireland)', gender: 'Male', traits: ['Authentic', 'Story'], flag: '🇮🇪' },
+  // --- Deepgram Aura 2 (Workers AI) ---
+  { id: 'aura-2-luna', model: '@cf/deepgram/aura-2-en', speaker: 'luna', name: 'Luna (Aura 2)', lang: 'English (US)', gender: 'Female', traits: ['Soft', 'Young'], flag: '🇺🇸' },
+  { id: 'aura-2-asteria', model: '@cf/deepgram/aura-2-en', speaker: 'asteria', name: 'Asteria (Aura 2)', lang: 'English (US)', gender: 'Female', traits: ['Standard', 'Confident'], flag: '🇺🇸' },
+  { id: 'aura-2-stella', model: '@cf/deepgram/aura-2-en', speaker: 'stella', name: 'Stella (Aura 2)', lang: 'English (US)', gender: 'Female', traits: ['Energetic', 'Narrative'], flag: '🇺🇸' },
+  { id: 'aura-2-athena', model: '@cf/deepgram/aura-2-en', speaker: 'athena', name: 'Athena (Aura 2)', lang: 'English (UK)', gender: 'Female', traits: ['Professional', 'Calm'], flag: '🇬🇧' },
+  { id: 'aura-2-orion', model: '@cf/deepgram/aura-2-en', speaker: 'orion', name: 'Orion (Aura 2)', lang: 'English (US)', gender: 'Male', traits: ['Deep', 'Narrative'], flag: '🇺🇸' },
+  { id: 'aura-2-arcas', model: '@cf/deepgram/aura-2-en', speaker: 'arcas', name: 'Arcas (Aura 2)', lang: 'English (US)', gender: 'Male', traits: ['Authoritative', 'News'], flag: '🇺🇸' },
+  { id: 'aura-2-perseus', model: '@cf/deepgram/aura-2-en', speaker: 'perseus', name: 'Perseus (Aura 2)', lang: 'English (US)', gender: 'Male', traits: ['Casual', 'Fast'], flag: '🇺🇸' },
   
-  // --- Aura 2 (Multilingual) ---
-  { id: 'aura-2-luna-en', name: 'Luna (V2)', lang: 'English (US)', gender: 'Female', traits: ['Next-Gen', 'Realistic'], flag: '🇺🇸' },
-  { id: 'aura-2-zeus-en', name: 'Zeus', lang: 'English (US)', gender: 'Male', traits: ['Deep', 'Movie Trailer'], flag: '🇺🇸' },
-  
-  // --- International ---
-  { id: 'aura-2-julius-de', name: 'Julius', lang: 'German', gender: 'Male', traits: ['Conversational'], flag: '🇩🇪' },
-  { id: 'aura-2-lara-de', name: 'Lara', lang: 'German', gender: 'Female', traits: ['Warm'], flag: '🇩🇪' },
-  { id: 'aura-2-agathe-fr', name: 'Agathe', lang: 'French', gender: 'Female', traits: ['Friendly'], flag: '🇫🇷' },
-  { id: 'aura-2-hector-fr', name: 'Hector', lang: 'French', gender: 'Male', traits: ['Confident'], flag: '🇫🇷' },
-  { id: 'aura-2-fujin-ja', name: 'Fujin', lang: 'Japanese', gender: 'Male', traits: ['Smooth'], flag: '🇯🇵' },
-  { id: 'aura-2-izanami-ja', name: 'Izanami', lang: 'Japanese', gender: 'Female', traits: ['Polite'], flag: '🇯🇵' },
+  // --- MeloTTS (Workers AI) ---
+  { id: 'melo-en', model: '@cf/myshell-ai/melotts', name: 'Melo (Base)', lang: 'English (General)', gender: 'Female', traits: ['Standard', 'Fast'], flag: '🇺🇳' },
 ];
 
 export default function TextToSpeech() {
@@ -53,6 +44,7 @@ export default function TextToSpeech() {
   const [loading, setLoading] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [enhance, setEnhance] = useState(false); // New state for enhancement
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Group voices by language for easier selection
@@ -69,7 +61,10 @@ export default function TextToSpeech() {
     if (!text) return;
     
     // Reset state
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    if (audioUrl) {
+       // Check if it's a blob url to revoke, though now we might use server URLs
+       if (audioUrl.startsWith('blob:')) URL.revokeObjectURL(audioUrl);
+    }
     setAudioUrl(null);
     setIsPlaying(false);
     setLoading(true);
@@ -78,22 +73,28 @@ export default function TextToSpeech() {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, model: selectedVoice.id }),
+        body: JSON.stringify({ 
+          text, 
+          model: selectedVoice.model,
+          speaker: selectedVoice.speaker,
+          enhance
+        }),
       });
 
       if (!res.ok) throw new Error('Generation failed');
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
-      
-      // Auto-play on success
-      setTimeout(() => {
-        if (audioRef.current) {
-          audioRef.current.play().catch(() => {});
-          setIsPlaying(true);
-        }
-      }, 100);
+      const data = await res.json();
+      if (data.url) {
+        setAudioUrl(data.url);
+        
+        // Auto-play on success
+        setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.play().catch(() => {});
+            setIsPlaying(true);
+          }
+        }, 100);
+      }
 
     } catch (e) {
       console.error(e);
@@ -119,7 +120,8 @@ export default function TextToSpeech() {
       <div className="space-y-2">
         <h2 className="text-2xl font-bold tracking-tight">AI Voice Studio</h2>
         <p className="text-muted-foreground">
-          Convert text to lifelike speech using Deepgram&apos;s next-generation Aura-2 models.
+          Convert text to lifelike speech using Cloudflare Workers AI (Aura-2 & MeloTTS).
+          Includes automated prompt enhancement and R2 storage.
         </p>
       </div>
 
@@ -133,12 +135,26 @@ export default function TextToSpeech() {
             <div className="relative bg-white dark:bg-black rounded-xl p-1">
               <textarea 
                 className="w-full h-64 p-6 rounded-lg bg-transparent border-0 focus:ring-0 outline-none resize-none text-lg leading-relaxed placeholder:text-gray-300 dark:placeholder:text-gray-700"
-                placeholder="Enter your script here. Deepgram Aura models are optimized for conversational, narrative, and professional speech. Try writing a few sentences to hear the natural inflection..."
+                placeholder="Enter your script here..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
               />
-              <div className="absolute bottom-4 right-4 text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
-                {text.length} chars
+              <div className="absolute bottom-4 right-4 flex items-center gap-4">
+                 <button 
+                  onClick={() => setEnhance(!enhance)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    enhance 
+                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' 
+                      : 'bg-gray-100 text-gray-500 dark:bg-gray-800'
+                  }`}
+                  title="Uses Llama-3 to optimize text for natural speech (pauses, spelling numbers, etc.)"
+                >
+                  <Wand2 size={12} />
+                  {enhance ? 'Enhancement On' : 'Enhance Text'}
+                </button>
+                <div className="text-xs font-medium text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
+                  {text.length} chars
+                </div>
               </div>
             </div>
           </div>
