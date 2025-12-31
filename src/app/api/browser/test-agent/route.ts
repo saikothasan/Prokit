@@ -189,7 +189,6 @@ export async function POST(req: NextRequest) {
     };
 
     // 5. In-Page Evaluation (SEO, Metrics, Accessibility)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const pageData = await page.evaluate(() => {
       // Performance
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
