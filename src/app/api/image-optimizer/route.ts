@@ -1,14 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import * as jpeg from '@jsquash/jpeg';
-import * as png from '@jsquash/png';
-import * as webp from '@jsquash/webp';
-import * as avif from '@jsquash/avif';
-import resize, { ResizeMethod } from '@jsquash/resize';
+import jpegDecode, { init as initJpegDecode } from '@jsquash/jpeg/decode';
+import jpegEncode, { init as initJpegEncode } from '@jsquash/jpeg/encode';
+import pngDecode, { init as initPngDecode } from '@jsquash/png/decode';
+import pngEncode, { init as initPngEncode } from '@jsquash/png/encode';
+import webpDecode, { init as initWebpDecode } from '@jsquash/webp/decode';
+import webpEncode, { init as initWebpEncode } from '@jsquash/webp/encode';
+import avifDecode, { init as initAvifDecode } from '@jsquash/avif/decode';
+import avifEncode, { init as initAvifEncode } from '@jsquash/avif/encode';
+import resize, { initResize } from '@jsquash/resize';
 
 // --- Configuration ---
 // We fetch WASM from a CDN to avoid bundling limits/issues on Cloudflare Workers
 const CDN_BASE = 'https://unpkg.com';
 
+// Note: Ensure these versions match your package.json or use 'latest' if appropriate.
+// Decoder and Encoder WASMs are often separate files in newer versions. 
+// For this fix, we are using the provided URLs, but you may need to check 
+// the @jsquash package contents on unpkg for dedicated decoder WASMs (e.g., jpeg_dec.wasm)
+// if you encounter runtime errors during decoding.
 const MODULE_CONFIG = {
   jpeg: { wasm: `${CDN_BASE}/@jsquash/jpeg@1.2.0/codec/pkg/squoosh_mozjpeg_bg.wasm` },
   png: { wasm: `${CDN_BASE}/@jsquash/png@2.0.0/codec/pkg/squoosh_oxipng_bg.wasm` },
@@ -42,24 +51,25 @@ export async function POST(req: NextRequest) {
     let imageData: ImageData;
 
     // 1. Decode Input
-    // We detect format by magic bytes or extension, but for simplicity here we try/catch standard decoders
     try {
-      if (file.type === 'image/jpeg' || file.name.endsWith('.jpg')) {
+      if (file.type === 'image/jpeg' || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg')) {
         const wasm = await fetchWasm(MODULE_CONFIG.jpeg.wasm);
-        await jpeg.init(wasm);
-        imageData = await jpeg.decode(buffer);
+        await initJpegDecode(wasm);
+        imageData = await jpegDecode(buffer);
       } else if (file.type === 'image/png' || file.name.endsWith('.png')) {
         const wasm = await fetchWasm(MODULE_CONFIG.png.wasm);
-        await png.init(wasm);
-        imageData = await png.decode(buffer);
+        await initPngDecode(wasm);
+        imageData = await pngDecode(buffer);
       } else if (file.type === 'image/webp' || file.name.endsWith('.webp')) {
-         const wasm = await fetchWasm(MODULE_CONFIG.webp.wasm);
-        await webp.init(wasm);
-        imageData = await webp.decode(buffer);
+        const wasm = await fetchWasm(MODULE_CONFIG.webp.wasm);
+        await initWebpDecode(wasm);
+        imageData = await webpDecode(buffer);
+      } else if (file.type === 'image/avif' || file.name.endsWith('.avif')) {
+         const wasm = await fetchWasm(MODULE_CONFIG.avif.wasm);
+         await initAvifDecode(wasm);
+         imageData = await avifDecode(buffer);
       } else {
-         // Fallback: Use browser/standard capabilities if available or throw
-         // In a pure worker, we might need a generic decoder or rely on jsquash support
-         throw new Error('Unsupported input format. Please upload JPG, PNG, or WebP.');
+         throw new Error('Unsupported input format. Please upload JPG, PNG, WebP or AVIF.');
       }
     } catch (e) {
       console.error("Decode error", e);
@@ -69,7 +79,7 @@ export async function POST(req: NextRequest) {
     // 2. Resize (if requested)
     if (width > 0 || height > 0) {
       const wasm = await fetchWasm(MODULE_CONFIG.resize.wasm);
-      await resize.init(wasm);
+      await initResize(wasm);
       
       // Calculate dimensions if one is missing (preserve aspect ratio)
       let targetWidth = width;
@@ -78,11 +88,11 @@ export async function POST(req: NextRequest) {
       if (targetWidth === 0) targetWidth = Math.round(imageData.width * (targetHeight / imageData.height));
       if (targetHeight === 0) targetHeight = Math.round(imageData.height * (targetWidth / imageData.width));
 
-      imageData = await resize.resize(imageData, {
+      imageData = await resize(imageData, {
         width: targetWidth,
         height: targetHeight,
-        fitMethod: fit === 'contain' ? ResizeMethod.Contain : ResizeMethod.Stretch, // jsquash resize mapping
-        // 'Cover' logic would require cropping, which is complex manually here, sticking to resize scaling
+        // @jsquash/resize uses string literals 'contain' | 'stretch' for fitMethod
+        fitMethod: fit === 'contain' ? 'contain' : 'stretch', 
       });
     }
 
@@ -92,32 +102,35 @@ export async function POST(req: NextRequest) {
     switch (targetFormat) {
       case 'avif': {
         const wasm = await fetchWasm(MODULE_CONFIG.avif.wasm);
-        await avif.init(wasm);
-        resultBuffer = await avif.encode(imageData, { quality });
+        await initAvifEncode(wasm);
+        resultBuffer = await avifEncode(imageData, { quality });
         break;
       }
-      case 'jpeg': {
-         // Re-init check handled by library usually, but good to be safe
-         if (!jpeg.default) await jpeg.init(await fetchWasm(MODULE_CONFIG.jpeg.wasm));
-         resultBuffer = await jpeg.encode(imageData, { quality });
+      case 'jpeg':
+      case 'jpg': {
+         const wasm = await fetchWasm(MODULE_CONFIG.jpeg.wasm);
+         await initJpegEncode(wasm);
+         resultBuffer = await jpegEncode(imageData, { quality });
          break;
       }
       case 'png': {
-         if (!png.default) await png.init(await fetchWasm(MODULE_CONFIG.png.wasm));
-         resultBuffer = await png.encode(imageData); // PNG is lossless, usually ignores quality or maps it to optimization effort
+         const wasm = await fetchWasm(MODULE_CONFIG.png.wasm);
+         await initPngEncode(wasm);
+         resultBuffer = await pngEncode(imageData);
          break;
       }
       case 'webp':
       default: {
-         if (!webp.default) await webp.init(await fetchWasm(MODULE_CONFIG.webp.wasm));
-         resultBuffer = await webp.encode(imageData, { quality });
+         const wasm = await fetchWasm(MODULE_CONFIG.webp.wasm);
+         await initWebpEncode(wasm);
+         resultBuffer = await webpEncode(imageData, { quality });
          break;
       }
     }
 
     // 4. Return Data
     const base64 = Buffer.from(resultBuffer).toString('base64');
-    const mimeType = `image/${targetFormat}`;
+    const mimeType = `image/${targetFormat === 'jpg' ? 'jpeg' : targetFormat}`;
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
     return NextResponse.json({
