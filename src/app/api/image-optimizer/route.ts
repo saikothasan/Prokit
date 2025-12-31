@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// 1. Static Imports for Decoders/Encoders (Subpaths are stable)
+// 1. Static Imports for Decoders/Encoders
 import jpegDecode, { init as initJpegDecode } from '@jsquash/jpeg/decode';
 import jpegEncode, { init as initJpegEncode } from '@jsquash/jpeg/encode';
 import pngDecode, { init as initPngDecode } from '@jsquash/png/decode';
@@ -10,24 +10,31 @@ import webpEncode, { init as initWebpEncode } from '@jsquash/webp/encode';
 import avifDecode, { init as initAvifDecode } from '@jsquash/avif/decode';
 import avifEncode, { init as initAvifEncode } from '@jsquash/avif/encode';
 
-// --- Configuration ---
-const CDN_BASE = 'https://unpkg.com';
+// 2. Import WASM files as assets (configured in next.config.ts)
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import jpegDecWasm from '@jsquash/jpeg/codec/pkg/squoosh_mozjpeg_dec_bg.wasm';
+// @ts-expect-error
+import jpegEncWasm from '@jsquash/jpeg/codec/pkg/squoosh_mozjpeg_enc_bg.wasm';
+// @ts-expect-error
+import pngDecWasm from '@jsquash/png/codec/pkg/squoosh_oxipng_bg.wasm';
+// @ts-expect-error
+import pngEncWasm from '@jsquash/png/codec/pkg/squoosh_oxipng_bg.wasm';
+// @ts-expect-error
+import webpDecWasm from '@jsquash/webp/codec/pkg/squoosh_webp_dec_bg.wasm';
+// @ts-expect-error
+import webpEncWasm from '@jsquash/webp/codec/pkg/squoosh_webp_enc_bg.wasm';
+// @ts-expect-error
+import avifDecWasm from '@jsquash/avif/codec/pkg/squoosh_avif_dec_bg.wasm';
+// @ts-expect-error
+import avifEncWasm from '@jsquash/avif/codec/pkg/squoosh_avif_enc_bg.wasm';
+// @ts-expect-error
+import resizeWasm from '@jsquash/resize/lib/resize_bg.wasm';
 
-const MODULE_CONFIG = {
-  jpegDec: `${CDN_BASE}/@jsquash/jpeg@1.2.0/codec/pkg/squoosh_mozjpeg_dec_bg.wasm`,
-  jpegEnc: `${CDN_BASE}/@jsquash/jpeg@1.2.0/codec/pkg/squoosh_mozjpeg_enc_bg.wasm`,
-  pngDec: `${CDN_BASE}/@jsquash/png@2.0.0/codec/pkg/squoosh_oxipng_bg.wasm`,
-  pngEnc: `${CDN_BASE}/@jsquash/png@2.0.0/codec/pkg/squoosh_oxipng_bg.wasm`,
-  webpDec: `${CDN_BASE}/@jsquash/webp@1.2.0/codec/pkg/squoosh_webp_dec_bg.wasm`,
-  webpEnc: `${CDN_BASE}/@jsquash/webp@1.2.0/codec/pkg/squoosh_webp_enc_bg.wasm`,
-  avifDec: `${CDN_BASE}/@jsquash/avif@1.3.0/codec/pkg/squoosh_avif_dec_bg.wasm`,
-  avifEnc: `${CDN_BASE}/@jsquash/avif@1.3.0/codec/pkg/squoosh_avif_enc_bg.wasm`,
-  resize: `${CDN_BASE}/@jsquash/resize@1.0.0/lib/resize_bg.wasm`,
-};
-
-async function fetchWasm(url: string): Promise<ArrayBuffer> {
+// Helper to load WASM from local assets
+async function loadWasm(wasmUrl: string, baseUrl: string): Promise<ArrayBuffer> {
+  const url = new URL(wasmUrl, baseUrl);
   const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to load WASM from ${url}`);
+  if (!res.ok) throw new Error(`Failed to load WASM from ${url.toString()}`);
   return await res.arrayBuffer();
 }
 
@@ -46,26 +53,27 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = await file.arrayBuffer();
+    const baseUrl = req.url; // Use current request URL as base for relative assets
     let imageData: ImageData;
 
-    // --- 2. Decode Input ---
+    // --- 3. Decode Input ---
     try {
       let decoded: ImageData | null = null;
 
       if (file.type === 'image/jpeg' || file.name.endsWith('.jpg') || file.name.endsWith('.jpeg')) {
-        const wasm = await fetchWasm(MODULE_CONFIG.jpegDec);
+        const wasm = await loadWasm(jpegDecWasm, baseUrl);
         await initJpegDecode(wasm);
         decoded = await jpegDecode(buffer);
       } else if (file.type === 'image/png' || file.name.endsWith('.png')) {
-        const wasm = await fetchWasm(MODULE_CONFIG.pngDec);
+        const wasm = await loadWasm(pngDecWasm, baseUrl);
         await initPngDecode(wasm);
         decoded = await pngDecode(buffer);
       } else if (file.type === 'image/webp' || file.name.endsWith('.webp')) {
-        const wasm = await fetchWasm(MODULE_CONFIG.webpDec);
+        const wasm = await loadWasm(webpDecWasm, baseUrl);
         await initWebpDecode(wasm);
         decoded = await webpDecode(buffer);
       } else if (file.type === 'image/avif' || file.name.endsWith('.avif')) {
-         const wasm = await fetchWasm(MODULE_CONFIG.avifDec);
+         const wasm = await loadWasm(avifDecWasm, baseUrl);
          await initAvifDecode(wasm);
          decoded = await avifDecode(buffer);
       } else {
@@ -82,17 +90,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to decode image. Format might be corrupted or unsupported.' }, { status: 400 });
     }
 
-    // --- 3. Resize (Optional) ---
+    // --- 4. Resize (Optional) ---
     if (width > 0 || height > 0) {
       try {
-        // Dynamic Import: Fixes build error "Module has no exported member 'init'"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ResizeMod = await import('@jsquash/resize') as any;
         const resize = ResizeMod.default;
-        // Check for initResize (standard) or init (older versions)
         const initResizeFunc = ResizeMod.initResize || ResizeMod.init;
 
-        const wasm = await fetchWasm(MODULE_CONFIG.resize);
+        const wasm = await loadWasm(resizeWasm, baseUrl);
         
         if (initResizeFunc) {
             await initResizeFunc(wasm);
@@ -101,7 +107,6 @@ export async function POST(req: NextRequest) {
         let targetWidth = width;
         let targetHeight = height;
         
-        // Auto-calculate dimensions if needed
         if (targetWidth === 0) targetWidth = Math.round(imageData.width * (targetHeight / imageData.height));
         if (targetHeight === 0) targetHeight = Math.round(imageData.height * (targetWidth / imageData.width));
 
@@ -116,33 +121,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // --- 4. Encode to Target Format ---
+    // --- 5. Encode to Target Format ---
     let resultBuffer: ArrayBuffer;
     
     try {
       switch (targetFormat) {
         case 'avif': {
-          const wasm = await fetchWasm(MODULE_CONFIG.avifEnc);
+          const wasm = await loadWasm(avifEncWasm, baseUrl);
           await initAvifEncode(wasm);
           resultBuffer = await avifEncode(imageData, { quality });
           break;
         }
         case 'jpeg':
         case 'jpg': {
-           const wasm = await fetchWasm(MODULE_CONFIG.jpegEnc);
+           const wasm = await loadWasm(jpegEncWasm, baseUrl);
            await initJpegEncode(wasm);
            resultBuffer = await jpegEncode(imageData, { quality });
            break;
         }
         case 'png': {
-           const wasm = await fetchWasm(MODULE_CONFIG.pngEnc);
+           const wasm = await loadWasm(pngEncWasm, baseUrl);
            await initPngEncode(wasm);
            resultBuffer = await pngEncode(imageData);
            break;
         }
         case 'webp':
         default: {
-           const wasm = await fetchWasm(MODULE_CONFIG.webpEnc);
+           const wasm = await loadWasm(webpEncWasm, baseUrl);
            await initWebpEncode(wasm);
            resultBuffer = await webpEncode(imageData, { quality });
            break;
@@ -153,18 +158,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to encode to target format.' }, { status: 500 });
     }
 
-    const base64 = Buffer.from(resultBuffer).toString('base64');
+    // --- 6. Return Binary Response ---
     const mimeType = `image/${targetFormat === 'jpg' ? 'jpeg' : targetFormat}`;
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-
-    return NextResponse.json({
-      success: true,
-      originalSize: file.size,
-      optimizedSize: resultBuffer.byteLength,
-      width: imageData.width,
-      height: imageData.height,
-      format: targetFormat,
-      image: dataUrl,
+    
+    return new NextResponse(resultBuffer, {
+      status: 200,
+      headers: {
+        'Content-Type': mimeType,
+        'Content-Length': resultBuffer.byteLength.toString(),
+        'X-Original-Width': imageData.width.toString(),
+        'X-Original-Height': imageData.height.toString(),
+        'X-Original-Size': file.size.toString(),
+      }
     });
 
   } catch (e: unknown) {
@@ -172,4 +177,5 @@ export async function POST(req: NextRequest) {
     const message = e instanceof Error ? e.message : 'Unknown error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
 }
