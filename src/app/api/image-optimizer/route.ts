@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// 1. Correct Subpath Imports for Decoders and Encoders
+// 1. Static Imports for Decoders/Encoders (Subpaths are stable)
 import jpegDecode, { init as initJpegDecode } from '@jsquash/jpeg/decode';
 import jpegEncode, { init as initJpegEncode } from '@jsquash/jpeg/encode';
 import pngDecode, { init as initPngDecode } from '@jsquash/png/decode';
@@ -85,16 +85,17 @@ export async function POST(req: NextRequest) {
     // --- 3. Resize (Optional) ---
     if (width > 0 || height > 0) {
       try {
-        // Dynamic import to bypass build-time static analysis issues with this specific package version
+        // Dynamic Import: Fixes build error "Module has no exported member 'init'"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ResizeMod = await import('@jsquash/resize') as any;
         const resize = ResizeMod.default;
-        const initResize = ResizeMod.init;
+        // Check for initResize (standard) or init (older versions)
+        const initResizeFunc = ResizeMod.initResize || ResizeMod.init;
 
         const wasm = await fetchWasm(MODULE_CONFIG.resize);
         
-        if (initResize) {
-            await initResize(wasm);
+        if (initResizeFunc) {
+            await initResizeFunc(wasm);
         }
 
         let targetWidth = width;
