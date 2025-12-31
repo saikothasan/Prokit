@@ -21,6 +21,17 @@ const nextConfig: NextConfig = {
     config.externals.push({
       "cloudflare:sockets": "commonjs cloudflare:sockets",
     });
+
+    // WASM Support: Treat .wasm files as assets (URLs) rather than modules.
+    // This allows us to import them in code and fetch them locally.
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: "asset/resource",
+      generator: {
+        filename: 'static/wasm/[hash][ext][query]'
+      }
+    });
+
     return config;
   },
   
