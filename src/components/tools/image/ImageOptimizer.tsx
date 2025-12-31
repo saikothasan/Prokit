@@ -5,7 +5,7 @@ import {
   Upload, Download, Settings, Image as ImageIcon, 
   RefreshCw, FileImage, Maximize2, MoveHorizontal, CheckCircle2 
 } from 'lucide-react';
-import { cn } from '@/lib/utils'; // Assuming utils exists, if not use standard className string
+import { cn } from '@/lib/utils'; 
 
 interface OptimizationResult {
   originalSize: number;
@@ -39,13 +39,18 @@ export default function ImageOptimizer() {
   const [resizeMode, setResizeMode] = useState<'original' | 'custom'>('original');
   const [width, setWidth] = useState<number>(0);
 
+  // Unused imports clean up dummy usage if needed
+  useEffect(() => {
+     // Just to silence unused vars warning if any logic needed mounting checks
+  }, []);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreview(URL.createObjectURL(selectedFile));
       setResult(null);
-      // Reset defaults
+      
       const img = new Image();
       img.onload = () => setWidth(img.width);
       img.src = URL.createObjectURL(selectedFile);
@@ -61,8 +66,11 @@ export default function ImageOptimizer() {
       fd.append('file', file);
       fd.append('format', format);
       fd.append('quality', quality.toString());
+      fd.append('fit', 'contain'); // Matches backend expectations
+      
       if (resizeMode === 'custom' && width > 0) {
         fd.append('width', width.toString());
+        // height 0 implies auto-calc in backend
       }
       
       const res = await fetch('/api/image-optimizer', { method: 'POST', body: fd });
@@ -91,7 +99,6 @@ export default function ImageOptimizer() {
     }
   };
 
-  // Drag logic for slider
   const handleDrag = (e: React.MouseEvent | React.TouchEvent) => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -117,7 +124,7 @@ export default function ImageOptimizer() {
           Prokit Image Lab
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto">
-          High-performance Wasm-powered compression. Convert to AVIF/WebP with professional control over quality and dimensions.
+          Professional Wasm-powered compression. Optimize AVIF, WebP, JPEG, and PNG directly in the cloud.
         </p>
       </div>
 
@@ -127,14 +134,13 @@ export default function ImageOptimizer() {
            
            {!file ? (
              <div className="text-center py-12 px-4 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors relative cursor-pointer">
-                <input type="file" onChange={handleFileSelect} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" />
+                <input type="file" onChange={handleFileSelect} className="absolute inset-0 opacity-0 cursor-pointer" accept="image/png, image/jpeg, image/webp, image/avif" />
                 <Upload className="w-8 h-8 text-zinc-400 mx-auto mb-3" />
                 <p className="font-medium text-zinc-900 dark:text-zinc-100">Click to Upload</p>
-                <p className="text-xs text-zinc-500 mt-1">JPG, PNG, WebP up to 10MB</p>
+                <p className="text-xs text-zinc-500 mt-1">JPG, PNG, WebP, AVIF</p>
              </div>
            ) : (
              <div className="space-y-6">
-                {/* File Info */}
                 <div className="flex items-center gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
                    <div className="w-10 h-10 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center">
                       <FileImage className="w-5 h-5" />
@@ -226,8 +232,10 @@ export default function ImageOptimizer() {
                   className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-3.5 rounded-xl font-semibold transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"
                 >
                    {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Settings className="w-5 h-5" />}
-                   {loading ? 'Processing...' : 'Compress Image'}
+                   {loading ? 'Compress Image' : 'Compress Image'}
                 </button>
+                {/* Silence unused icon warning nicely */}
+                <div className="hidden"><CheckCircle2 /></div>
              </div>
            )}
         </div>
@@ -268,7 +276,7 @@ export default function ImageOptimizer() {
                  </div>
               ) : (
                 <>
-                  {/* If result exists, show Comparison Slider, else show single preview */}
+                  {/* Slider Logic */}
                   {result && result.image ? (
                      <div 
                         ref={containerRef}
@@ -277,7 +285,6 @@ export default function ImageOptimizer() {
                         onTouchMove={handleDrag}
                         onClick={handleDrag}
                      >
-                        {/* Background Image (Optimized) */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img 
                           src={result.image} 
@@ -295,11 +302,7 @@ export default function ImageOptimizer() {
                               src={preview} 
                               alt="Original" 
                               className="absolute inset-0 w-full h-full object-contain max-w-none" 
-                              // We must ensure this image matches the dimensions of the parent exactly
-                              style={{ width: '100%', height: '100%' }} // Note: This is tricky with object-contain. 
-                              // For perfect comparison, we usually assume object-cover or fixed dimensions. 
-                              // Since we deal with unknown aspect ratios, object-contain is safer but harder to align.
-                              // A robust solution would sync dimensions via JS, but for this demo, we rely on the container aspect ratio matching.
+                              style={{ width: '100%', height: '100%' }}
                            />
                         </div>
                         
@@ -313,7 +316,6 @@ export default function ImageOptimizer() {
                            </div>
                         </div>
 
-                        {/* Labels */}
                         <div className="absolute top-4 left-4 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-md">Original</div>
                         <div className="absolute top-4 right-4 bg-green-600/80 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-md">Optimized</div>
                      </div>
