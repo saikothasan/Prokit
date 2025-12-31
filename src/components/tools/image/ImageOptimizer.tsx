@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Upload, Download, Settings, Image as ImageIcon, 
-  RefreshCw, FileImage, Maximize2, MoveHorizontal, CheckCircle2 
+  RefreshCw, FileImage, Maximize2, MoveHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils'; 
 
@@ -39,11 +39,6 @@ export default function ImageOptimizer() {
   const [resizeMode, setResizeMode] = useState<'original' | 'custom'>('original');
   const [width, setWidth] = useState<number>(0);
 
-  // Unused imports clean up dummy usage if needed
-  useEffect(() => {
-     // Just to silence unused vars warning if any logic needed mounting checks
-  }, []);
-
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const selectedFile = e.target.files[0];
@@ -60,27 +55,46 @@ export default function ImageOptimizer() {
   const handleUpload = async () => {
     if (!file) return;
     setLoading(true);
+    setResult(null);
     
     try {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('format', format);
       fd.append('quality', quality.toString());
-      fd.append('fit', 'contain'); // Matches backend expectations
+      fd.append('fit', 'contain'); 
       
       if (resizeMode === 'custom' && width > 0) {
         fd.append('width', width.toString());
-        // height 0 implies auto-calc in backend
       }
       
       const res = await fetch('/api/image-optimizer', { method: 'POST', body: fd });
-      const data = (await res.json()) as OptimizationResult;
       
-      if (!res.ok || data.error) {
-        throw new Error(data.error || 'Optimization failed');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Optimization failed');
       }
+
+      // Handle Binary Response (Blob)
+      const blob = await res.blob();
+      const optimizedUrl = URL.createObjectURL(blob);
       
-      setResult(data);
+      // Extract metadata from headers
+      const originalSize = parseInt(res.headers.get('X-Original-Size') || file.size.toString());
+      const optimizedSize = parseInt(res.headers.get('Content-Length') || blob.size.toString());
+      const resWidth = parseInt(res.headers.get('X-Original-Width') || '0');
+      const resHeight = parseInt(res.headers.get('X-Original-Height') || '0');
+
+      setResult({
+        success: true,
+        originalSize,
+        optimizedSize,
+        width: resWidth,
+        height: resHeight,
+        format: format,
+        image: optimizedUrl
+      });
+      
     } catch (err: unknown) {
         alert(err instanceof Error ? err.message : 'Error optimizing image');
     } finally {
@@ -89,10 +103,10 @@ export default function ImageOptimizer() {
   };
 
   const handleDownload = () => {
-    if (result?.image) {
+    if (result?.image && file) {
         const link = document.createElement('a');
         link.href = result.image;
-        link.download = `optimized-${file?.name.split('.')[0]}.${result.format}`;
+        link.download = `optimized-${file.name.split('.')[0]}.${result.format}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -234,8 +248,6 @@ export default function ImageOptimizer() {
                    {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Settings className="w-5 h-5" />}
                    {loading ? 'Compress Image' : 'Compress Image'}
                 </button>
-                {/* Silence unused icon warning nicely */}
-                <div className="hidden"><CheckCircle2 /></div>
              </div>
            )}
         </div>
@@ -248,7 +260,7 @@ export default function ImageOptimizer() {
                  <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
                     <div className="text-xs text-zinc-500 uppercase font-semibold mb-1">Savings</div>
                     <div className="text-2xl font-bold text-green-600">
-                       -{Math.round(((result.originalSize - result.optimizedSize) / result.originalSize) * 100)}%
+                       {result.optimizedSize < result.originalSize ? '-' : '+'}{Math.abs(Math.round(((result.originalSize - result.optimizedSize) / result.originalSize) * 100))}%
                     </div>
                  </div>
                  <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
