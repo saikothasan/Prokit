@@ -10,13 +10,6 @@ import webpEncode, { init as initWebpEncode } from '@jsquash/webp/encode';
 import avifDecode, { init as initAvifDecode } from '@jsquash/avif/decode';
 import avifEncode, { init as initAvifEncode } from '@jsquash/avif/encode';
 
-// 2. Special handling for resize due to strict type issues in this version
-import * as ResizePkg from '@jsquash/resize';
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const resize = (ResizePkg as any).default;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const initResize = (ResizePkg as any).init;
-
 // --- Configuration ---
 const CDN_BASE = 'https://unpkg.com';
 
@@ -55,7 +48,7 @@ export async function POST(req: NextRequest) {
     const buffer = await file.arrayBuffer();
     let imageData: ImageData;
 
-    // --- 3. Decode Input ---
+    // --- 2. Decode Input ---
     try {
       let decoded: ImageData | null = null;
 
@@ -89,12 +82,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to decode image. Format might be corrupted or unsupported.' }, { status: 400 });
     }
 
-    // --- 4. Resize (Optional) ---
+    // --- 3. Resize (Optional) ---
     if (width > 0 || height > 0) {
       try {
+        // Dynamic import to bypass build-time static analysis issues with this specific package version
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ResizeMod = await import('@jsquash/resize') as any;
+        const resize = ResizeMod.default;
+        const initResize = ResizeMod.init;
+
         const wasm = await fetchWasm(MODULE_CONFIG.resize);
         
-        // Handle init safely
         if (initResize) {
             await initResize(wasm);
         }
@@ -102,6 +100,7 @@ export async function POST(req: NextRequest) {
         let targetWidth = width;
         let targetHeight = height;
         
+        // Auto-calculate dimensions if needed
         if (targetWidth === 0) targetWidth = Math.round(imageData.width * (targetHeight / imageData.height));
         if (targetHeight === 0) targetHeight = Math.round(imageData.height * (targetWidth / imageData.width));
 
@@ -116,7 +115,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // --- 5. Encode to Target Format ---
+    // --- 4. Encode to Target Format ---
     let resultBuffer: ArrayBuffer;
     
     try {
