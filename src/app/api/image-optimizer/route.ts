@@ -12,23 +12,23 @@ import avifEncode, { init as initAvifEncode } from '@jsquash/avif/encode';
 
 // 2. Import WASM files as assets (configured in next.config.ts)
 // @ts-expect-error - Webpack handles these imports via asset/resource
-import jpegDecWasm from '@jsquash/jpeg/codec/pkg/squoosh_mozjpeg_dec_bg.wasm';
-// @ts-expect-error
-import jpegEncWasm from '@jsquash/jpeg/codec/pkg/squoosh_mozjpeg_enc_bg.wasm';
-// @ts-expect-error
-import pngDecWasm from '@jsquash/png/codec/pkg/squoosh_oxipng_bg.wasm';
-// @ts-expect-error
-import pngEncWasm from '@jsquash/png/codec/pkg/squoosh_oxipng_bg.wasm';
-// @ts-expect-error
-import webpDecWasm from '@jsquash/webp/codec/pkg/squoosh_webp_dec_bg.wasm';
-// @ts-expect-error
-import webpEncWasm from '@jsquash/webp/codec/pkg/squoosh_webp_enc_bg.wasm';
-// @ts-expect-error
-import avifDecWasm from '@jsquash/avif/codec/pkg/squoosh_avif_dec_bg.wasm';
-// @ts-expect-error
-import avifEncWasm from '@jsquash/avif/codec/pkg/squoosh_avif_enc_bg.wasm';
-// @ts-expect-error
-import resizeWasm from '@jsquash/resize/lib/resize_bg.wasm';
+import jpegDecWasm from '@jsquash/jpeg/codec/dec/mozjpeg_dec.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import jpegEncWasm from '@jsquash/jpeg/codec/enc/mozjpeg_enc.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import pngDecWasm from '@jsquash/png/codec/pkg/squoosh_png_bg.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import pngEncWasm from '@jsquash/png/codec/pkg/squoosh_png_bg.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import webpDecWasm from '@jsquash/webp/codec/dec/webp_dec.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import webpEncWasm from '@jsquash/webp/codec/enc/webp_enc.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import avifDecWasm from '@jsquash/avif/codec/dec/avif_dec.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import avifEncWasm from '@jsquash/avif/codec/enc/avif_enc.wasm';
+// @ts-expect-error - Webpack handles these imports via asset/resource
+import resizeWasm from '@jsquash/resize/lib/resize/pkg/squoosh_resize_bg.wasm';
 
 // Helper to load WASM from local assets
 async function loadWasm(wasmUrl: string, baseUrl: string): Promise<ArrayBuffer> {
