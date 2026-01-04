@@ -27,7 +27,6 @@
     "@jsquash/webp": "^1.5.0",
     "@jsquash/resize": "^2.1.0",
     "mimetext": "latest",
-    "speaker": "latest",
     "https-proxy-agent": "latest",
     "recharts": "latest",
     "clsx": "latest",

@@ -71,7 +71,7 @@ export default function ImageOptimizer() {
       const res = await fetch('/api/image-optimizer', { method: 'POST', body: fd });
       
       if (!res.ok) {
-        const errData = await res.json();
+        const errData = await res.json() as { error?: string };
         throw new Error(errData.error || 'Optimization failed');
       }
 
