@@ -64,6 +64,9 @@ const SsnGenerator = dynamic(() => import('@/components/tools/dev/SsnGenerator')
 const SslInspector = dynamic(() => import('@/components/tools/security/SslInspector'), {
   loading: () => <ToolLoader name="SSL Inspector" />,
 });
+const CpfGenerator = dynamic(() => import('@/components/tools/dev/CpfGenerator'), {
+  loading: () => <ToolLoader name="CPF Generator" />,
+});
 const CryptoLab = dynamic(() => import('@/components/tools/security/CryptoLab'), {
   loading: () => <ToolLoader name="Crypto Lab" />,
 });
@@ -137,6 +140,15 @@ export const tools: Tool[] = [
     icon: FileCode,
     keywords: ['ssn', 'fake', 'generator', 'testing', 'mock', 'data'],
     component: SsnGenerator,
+  },
+	{
+    slug: 'cpf-generator',
+    name: 'CPF Generator',
+    description: 'Generate valid, algorithmic Brazilian CPF numbers (Cadastro de Pessoas Físicas) for testing.',
+    category: 'dev',
+    icon: User, // Represents Personal ID
+    keywords: ['cpf', 'brazil', 'id', 'generator', 'fake', 'data'],
+    component: CpfGenerator,
   },
   {
     slug: 'dns-lookup',
