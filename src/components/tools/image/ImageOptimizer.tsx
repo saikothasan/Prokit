@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   Upload, Download, Settings, Image as ImageIcon, 
-  RefreshCw, FileImage, Maximize2, MoveHorizontal
+  RefreshCw, FileImage, Maximize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils'; 
+import { ImageComparisonSlider } from './ImageComparisonSlider';
 
 interface OptimizationResult {
   originalSize: number;
@@ -30,8 +31,6 @@ export default function ImageOptimizer() {
   const [preview, setPreview] = useState<string>('');
   const [result, setResult] = useState<OptimizationResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [sliderPosition, setSliderPosition] = useState(50);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   // Settings
   const [format, setFormat] = useState('avif');
@@ -110,15 +109,6 @@ export default function ImageOptimizer() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-    }
-  };
-
-  const handleDrag = (e: React.MouseEvent | React.TouchEvent) => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const pos = ((x - rect.left) / rect.width) * 100;
-      setSliderPosition(Math.min(Math.max(pos, 0), 100));
     }
   };
 
@@ -290,47 +280,7 @@ export default function ImageOptimizer() {
                 <>
                   {/* Slider Logic */}
                   {result && result.image ? (
-                     <div 
-                        ref={containerRef}
-                        className="relative w-full h-full min-h-[500px] cursor-col-resize"
-                        onMouseMove={handleDrag}
-                        onTouchMove={handleDrag}
-                        onClick={handleDrag}
-                     >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={result.image} 
-                          alt="Optimized" 
-                          className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none" 
-                        />
-                        
-                        {/* Foreground Image (Original) - Clipped */}
-                        <div 
-                          className="absolute inset-0 overflow-hidden pointer-events-none select-none border-r-2 border-white shadow-[0_0_20px_rgba(0,0,0,0.5)]"
-                          style={{ width: `${sliderPosition}%` }}
-                        >
-                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                           <img 
-                              src={preview} 
-                              alt="Original" 
-                              className="absolute inset-0 w-full h-full object-contain max-w-none" 
-                              style={{ width: '100%', height: '100%' }}
-                           />
-                        </div>
-                        
-                        {/* Slider Handle */}
-                        <div 
-                           className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize flex items-center justify-center shadow-lg"
-                           style={{ left: `${sliderPosition}%` }}
-                        >
-                           <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-xl transform -translate-x-0.5">
-                              <MoveHorizontal className="w-4 h-4 text-zinc-900" />
-                           </div>
-                        </div>
-
-                        <div className="absolute top-4 left-4 bg-black/50 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-md">Original</div>
-                        <div className="absolute top-4 right-4 bg-green-600/80 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-md">Optimized</div>
-                     </div>
+                     <ImageComparisonSlider original={preview} optimized={result.image} />
                   ) : (
                      <div className="relative w-full h-full p-4">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
