@@ -16,8 +16,8 @@
   "observability": {
     "enabled": true
   },
-  "placement": { 
-    "mode": "smart" 
+  "placement": {
+    "mode": "smart"
   },
 
   // 2. STORAGE BINDINGS
@@ -65,7 +65,7 @@
       "namespace_id": "1001",
       "simple": {
         "limit": 5,
-        "period": 60 
+        "period": 60
       }
     }
   ],
@@ -75,6 +75,33 @@
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "nn"
+    }
+  ],
+
+  // 7. COMPUTE (DURABLE OBJECTS & CONTAINERS)
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./Dockerfile",
+      "name": "sandbox",
+      "max_instances": 1,
+      "instance_type": "basic"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "Sandbox",
+        "name": "Sandbox"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "new_sqlite_classes": [
+        "Sandbox"
+      ],
+      "tag": "v1"
     }
   ]
 }
