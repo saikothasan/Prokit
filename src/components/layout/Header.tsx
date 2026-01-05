@@ -56,6 +56,7 @@ export function Header() {
           <Link 
             href="https://github.com/saikothasan/Prokit" 
             target="_blank"
+            aria-label="GitHub Repository"
             className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
           >
             <Github size={18} />
@@ -74,6 +75,9 @@ export function Header() {
         {/* 4. Mobile Toggle */}
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-menu"
           className="md:hidden p-2 text-[var(--foreground)] hover:bg-[var(--muted)] rounded-sm transition-colors"
         >
           {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -82,7 +86,10 @@ export function Header() {
 
       {/* 5. Mobile Menu (Technical List) */}
       {isMenuOpen && (
-        <div className="md:hidden border-b border-[var(--border)] bg-[var(--background)]">
+        <div
+          id="mobile-menu"
+          className="md:hidden border-b border-[var(--border)] bg-[var(--background)]"
+        >
           <div className="p-4 space-y-1 font-mono text-sm">
             <MobileLink href="/" onClick={() => setIsMenuOpen(false)} index="01">Index</MobileLink>
             <MobileLink href="/categories" onClick={() => setIsMenuOpen(false)} index="02">Modules</MobileLink>
