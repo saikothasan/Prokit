@@ -16,6 +16,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URL and Method are required' }, { status: 400 });
     }
 
+    // SECURITY: Prevent SSRF by validating the URL
+    // We only allow public HTTP/HTTPS URLs and block private IPs/localhost
+    const { isSafeUrl } = await import('@/lib/security');
+    const safetyCheck = isSafeUrl(url);
+    if (!safetyCheck.safe) {
+      return NextResponse.json({
+        error: 'Security Violation',
+        details: safetyCheck.error
+      }, { status: 403 });
+    }
+
     // 1. Start Timer
     const startTime = performance.now();
 
