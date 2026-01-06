@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Play,
   Loader2,
@@ -99,6 +99,41 @@ type Tab = 'overview' | 'seo' | 'resources' | 'performance' | 'security' | 'cons
 
 type DeviceType = 'desktop' | 'mobile';
 
+const RESOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
+
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  payload?: any[];
+  label?: string;
+}) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div className="bg-white dark:bg-zinc-900 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl text-sm">
+        <p className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{data.full || label}</p>
+        <div className="space-y-1">
+          <p className="text-zinc-600 dark:text-zinc-400">
+            Value: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+              {typeof data.value === 'number' && data.value > 1000
+               ? `${(data.value / 1024).toFixed(1)} KB`
+               : `${data.value.toFixed(0)} ${data.full ? 'ms' : 'bytes'}`}
+            </span>
+          </p>
+          {data.count && (
+             <p className="text-zinc-500">Count: {data.count}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function TestAgent() {
   const [url, setUrl] = useState('');
   const [device, setDevice] = useState<DeviceType>('desktop');
@@ -144,16 +179,16 @@ export default function TestAgent() {
 
   // --- Chart Data Preparation ---
 
-  const perfChartData = result
+  const perfChartData = useMemo(() => result
     ? [
         { name: 'TTFB', value: result.data.metrics.ttfb, fill: '#3b82f6', full: 'Time to First Byte' },
         { name: 'FCP', value: result.data.metrics.fcp, fill: '#22c55e', full: 'First Contentful Paint' },
         { name: 'DOM', value: result.data.metrics.domLoad, fill: '#f59e0b', full: 'DOM Content Loaded' },
         { name: 'Load', value: result.data.metrics.windowLoad, fill: '#ec4899', full: 'Window Load' },
       ]
-    : [];
+    : [], [result]);
 
-  const resourceChartData = result
+  const resourceChartData = useMemo(() => result
     ? Object.entries(result.data.resources.breakdown)
         .filter(([, data]) => data.size > 0)
         .map(([key, data]) => ({
@@ -161,44 +196,7 @@ export default function TestAgent() {
           value: data.size,
           count: data.count,
         }))
-    : [];
-
-  const RESOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
-
-  // --- Components ---
-
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload?: any[];
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white dark:bg-zinc-900 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl text-sm">
-          <p className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{data.full || label}</p>
-          <div className="space-y-1">
-            <p className="text-zinc-600 dark:text-zinc-400">
-              Value: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                {typeof data.value === 'number' && data.value > 1000
-                 ? `${(data.value / 1024).toFixed(1)} KB`
-                 : `${data.value.toFixed(0)} ${data.full ? 'ms' : 'bytes'}`}
-              </span>
-            </p>
-            {data.count && (
-               <p className="text-zinc-500">Count: {data.count}</p>
-            )}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+    : [], [result]);
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
