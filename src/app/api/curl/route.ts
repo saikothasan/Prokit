@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSafeUrl } from '@/lib/security/ssrf';
 
 interface CurlRequest {
   method: string;
@@ -14,6 +15,12 @@ export async function POST(req: NextRequest) {
 
     if (!url || !method) {
       return NextResponse.json({ error: 'URL and Method are required' }, { status: 400 });
+    }
+
+    // Security Check: SSRF Protection
+    const urlCheck = isSafeUrl(url);
+    if (!urlCheck.safe) {
+      return NextResponse.json({ error: 'Security Warning', details: urlCheck.reason }, { status: 400 });
     }
 
     // 1. Start Timer
