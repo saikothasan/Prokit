@@ -43,7 +43,7 @@ export function Header() {
           {/* Live Status Indicator */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-sm bg-[var(--muted)] border border-[var(--border)]">
              <div className="relative flex h-2 w-2">
-               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+               <span aria-hidden="true" className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
              </div>
              <span className="text-[10px] font-mono font-medium text-[var(--foreground)]">
@@ -56,6 +56,7 @@ export function Header() {
           <Link 
             href="https://github.com/saikothasan/Prokit" 
             target="_blank"
+            aria-label="View source on GitHub"
             className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
           >
             <Github size={18} />
@@ -64,6 +65,7 @@ export function Header() {
           <Link 
             href="https://t.me/drkingbd" 
             target="_blank"
+            aria-label="Join Telegram community"
             className="inline-flex items-center gap-2 px-4 py-1.5 text-xs font-medium bg-[var(--foreground)] text-[var(--background)] rounded-sm hover:opacity-90 transition-all"
           >
             <Terminal size={12} />
@@ -74,6 +76,8 @@ export function Header() {
         {/* 4. Mobile Toggle */}
         <button 
           onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={isMenuOpen}
           className="md:hidden p-2 text-[var(--foreground)] hover:bg-[var(--muted)] rounded-sm transition-colors"
         >
           {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
