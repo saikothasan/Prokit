@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validateUrl } from '@/lib/security';
 
 interface CurlRequest {
   method: string;
@@ -14,6 +15,12 @@ export async function POST(req: NextRequest) {
 
     if (!url || !method) {
       return NextResponse.json({ error: 'URL and Method are required' }, { status: 400 });
+    }
+
+    // Security Check: SSRF Prevention
+    const securityCheck = validateUrl(url);
+    if (!securityCheck.valid) {
+      return NextResponse.json({ error: securityCheck.error }, { status: 403 });
     }
 
     // 1. Start Timer
