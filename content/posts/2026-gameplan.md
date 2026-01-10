@@ -3,7 +3,7 @@ title: "Complete Guide to Building Your 2026 Gameplan"
 date: "2025-11-20"
 image: "/images/Image_202601102214.jpeg"
 description: "This guide breaks down 0xKyle investment philosophy and provides actionable steps for implementing a similar strategy."
-categories: ["Guide"]
+categories: ["Crypto"]
 tags: ["intro", "guide", "prokit"]
 ---
 
