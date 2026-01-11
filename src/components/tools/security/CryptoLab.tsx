@@ -12,6 +12,21 @@ interface CryptoResponse {
   error?: string;
 }
 
+function isCryptoResponse(data: unknown): data is CryptoResponse {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
+
+  const candidate = data as Partial<CryptoResponse>;
+
+  if (candidate.publicKey !== undefined && typeof candidate.publicKey !== 'string') return false;
+  if (candidate.privateKey !== undefined && typeof candidate.privateKey !== 'string') return false;
+  if (candidate.output !== undefined && typeof candidate.output !== 'string') return false;
+  if (candidate.error !== undefined && typeof candidate.error !== 'string') return false;
+
+  return true;
+}
+
 export default function CryptoLab() {
   const [mode, setMode] = useState<ToolMode>('generate');
   const [subType, setSubType] = useState('rsa'); // rsa, uuid, sha256, etc.
@@ -35,9 +50,13 @@ export default function CryptoLab() {
         })
       });
       
-      // FIX: Added type assertion 'as CryptoResponse' to resolve build error
-      const data = (await res.json()) as CryptoResponse;
-      setResult(data);
+      const data = await res.json();
+
+      if (isCryptoResponse(data)) {
+        setResult(data);
+      } else {
+        setResult({ error: 'Invalid response format' });
+      }
     } catch {
       setResult({ error: 'Operation failed' });
     } finally {
