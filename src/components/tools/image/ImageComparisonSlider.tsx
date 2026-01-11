@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import { MoveHorizontal } from 'lucide-react';
 
 interface ImageComparisonSliderProps {
@@ -9,22 +9,45 @@ interface ImageComparisonSliderProps {
 }
 
 export function ImageComparisonSlider({ original, optimized }: ImageComparisonSliderProps) {
-  const [sliderPosition, setSliderPosition] = useState(50);
+  // ⚡ Bolt Optimization: Use refs for direct DOM manipulation.
+  // This prevents React re-renders on every mouse move (60+ times/sec),
+  // which is expensive for image-heavy components.
   const containerRef = useRef<HTMLDivElement>(null);
+  const clipperRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
 
-  const handleDrag = (e: React.MouseEvent | React.TouchEvent) => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      const x = 'touches' in e ? e.touches[0].clientX : e.clientX;
-      const pos = ((x - rect.left) / rect.width) * 100;
-      setSliderPosition(Math.min(Math.max(pos, 0), 100));
+  // Track animation frame to avoid stacking updates
+  const rafRef = useRef<number | null>(null);
+
+  const handleDrag = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!containerRef.current || !clipperRef.current || !handleRef.current) return;
+
+    // Get coordinates
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+
+    // Calculate percentage and clamp between 0 and 100
+    const pos = Math.min(Math.max(((clientX - rect.left) / rect.width) * 100, 0), 100);
+
+    // Use requestAnimationFrame for smooth updates without React render cycle overhead
+    if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
     }
-  };
+
+    rafRef.current = requestAnimationFrame(() => {
+        if (clipperRef.current) {
+            clipperRef.current.style.width = `${pos}%`;
+        }
+        if (handleRef.current) {
+            handleRef.current.style.left = `${pos}%`;
+        }
+    });
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full min-h-[500px] cursor-col-resize"
+      className="relative w-full h-full min-h-[500px] cursor-col-resize touch-none"
       onMouseMove={handleDrag}
       onTouchMove={handleDrag}
       onClick={handleDrag}
@@ -39,8 +62,9 @@ export function ImageComparisonSlider({ original, optimized }: ImageComparisonSl
 
       {/* Original Image (Foreground) - Clipped */}
       <div
+        ref={clipperRef}
         className="absolute inset-0 overflow-hidden pointer-events-none select-none border-r-2 border-white shadow-[0_0_20px_rgba(0,0,0,0.5)]"
-        style={{ width: `${sliderPosition}%` }}
+        style={{ width: '50%' }}
       >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -53,8 +77,9 @@ export function ImageComparisonSlider({ original, optimized }: ImageComparisonSl
 
       {/* Slider Handle */}
       <div
+          ref={handleRef}
           className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize flex items-center justify-center shadow-lg"
-          style={{ left: `${sliderPosition}%` }}
+          style={{ left: '50%' }}
       >
           <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-xl transform -translate-x-0.5">
             <MoveHorizontal className="w-4 h-4 text-zinc-900" />
