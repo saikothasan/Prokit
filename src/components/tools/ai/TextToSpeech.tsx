@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, memo } from 'react';
 import { 
   AudioLines, 
   Play, 
@@ -37,6 +37,54 @@ const VOICES: Voice[] = [
   // --- MeloTTS (Workers AI) ---
   { id: 'melo-en', model: '@cf/myshell-ai/melotts', name: 'Melo (Base)', lang: 'English (General)', gender: 'Female', traits: ['Standard', 'Fast'], flag: '🇺🇳' },
 ];
+
+// ⚡ Bolt Optimization: Extracted VoiceList to prevent re-renders on text input
+const VoiceList = memo(({ groupedVoices, selectedVoiceId, onSelect }: {
+  groupedVoices: Record<string, Voice[]>;
+  selectedVoiceId: string;
+  onSelect: (v: Voice) => void;
+}) => (
+  <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 h-[600px] overflow-y-auto custom-scrollbar">
+    <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">
+      <Globe size={14} /> Available Voices
+    </div>
+
+    <div className="space-y-6">
+      {Object.entries(groupedVoices).map(([lang, voices]) => (
+        <div key={lang} className="space-y-3">
+          <h4 className="text-xs font-bold text-gray-400 pl-2">{lang}</h4>
+          <div className="grid grid-cols-1 gap-2">
+            {voices.map((voice) => (
+              <button
+                key={voice.id}
+                onClick={() => onSelect(voice)}
+                className={`relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:bg-white dark:hover:bg-gray-800 ${
+                  selectedVoiceId === voice.id
+                    ? 'bg-white dark:bg-gray-800 border-blue-500 ring-1 ring-blue-500 shadow-sm'
+                    : 'bg-transparent border-transparent hover:border-gray-200 dark:hover:border-gray-700'
+                }`}
+              >
+                <span className="text-2xl">{voice.flag}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">{voice.name}</span>
+                    {selectedVoiceId === voice.id && <CheckCircle2 size={14} className="text-blue-500" />}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                    <span>{voice.gender}</span>
+                    <span>•</span>
+                    <span className="truncate">{voice.traits.join(', ')}</span>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+));
+VoiceList.displayName = 'VoiceList';
 
 export default function TextToSpeech() {
   const [text, setText] = useState('');
@@ -183,46 +231,11 @@ export default function TextToSpeech() {
         {/* Right Column: Voice Selection & Player */}
         <div className="space-y-6">
           
-          {/* Voice Selector */}
-          <div className="bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 h-[600px] overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-2 mb-4 text-sm font-semibold text-gray-500 uppercase tracking-wider">
-              <Globe size={14} /> Available Voices
-            </div>
-            
-            <div className="space-y-6">
-              {Object.entries(groupedVoices).map(([lang, voices]) => (
-                <div key={lang} className="space-y-3">
-                  <h4 className="text-xs font-bold text-gray-400 pl-2">{lang}</h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    {voices.map((voice) => (
-                      <button
-                        key={voice.id}
-                        onClick={() => setSelectedVoice(voice)}
-                        className={`relative flex items-center gap-3 p-3 rounded-xl border text-left transition-all hover:bg-white dark:hover:bg-gray-800 ${
-                          selectedVoice.id === voice.id 
-                            ? 'bg-white dark:bg-gray-800 border-blue-500 ring-1 ring-blue-500 shadow-sm' 
-                            : 'bg-transparent border-transparent hover:border-gray-200 dark:hover:border-gray-700'
-                        }`}
-                      >
-                        <span className="text-2xl">{voice.flag}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold text-gray-900 dark:text-gray-100">{voice.name}</span>
-                            {selectedVoice.id === voice.id && <CheckCircle2 size={14} className="text-blue-500" />}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
-                            <span>{voice.gender}</span>
-                            <span>•</span>
-                            <span className="truncate">{voice.traits.join(', ')}</span>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <VoiceList
+            groupedVoices={groupedVoices}
+            selectedVoiceId={selectedVoice.id}
+            onSelect={setSelectedVoice}
+          />
 
         </div>
       </div>
