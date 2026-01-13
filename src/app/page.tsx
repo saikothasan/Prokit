@@ -58,9 +58,10 @@ export default function Home() {
 
           {/* Search Field (Minimalist) */}
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+            <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
             <input 
               type="text" 
+              aria-label="Filter modules"
               placeholder="Filter modules..." 
               className="w-full pl-9 pr-4 py-1.5 bg-[var(--muted)] border-none rounded-md text-sm text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:ring-1 focus:ring-[var(--foreground)] transition-all"
             />
