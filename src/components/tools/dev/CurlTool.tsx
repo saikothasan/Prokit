@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Terminal, Play, Plus, Trash2, Clock, Copy, Import, X } from 'lucide-react';
+import { Terminal, Play, Plus, Trash2, Clock, Copy, Import, X, Check } from 'lucide-react';
 
 interface HeaderItem {
   key: string;
@@ -29,6 +29,7 @@ export default function CurlTool() {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<CurlResponse | null>(null);
   const [activeTab, setActiveTab] = useState<'response' | 'headers'>('response');
+  const [copied, setCopied] = useState(false);
   
   // Import State
   const [showImport, setShowImport] = useState(false);
@@ -158,6 +159,15 @@ export default function CurlTool() {
       cmd += ` \\\n  -d '${body.replace(/'/g, "'\\''")}'`;
     }
     return cmd;
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(generateCurlCommand()).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => {
+      console.error('Failed to copy text: ', err);
+    });
   };
 
   const handleRun = async (e: React.FormEvent) => {
@@ -340,11 +350,12 @@ export default function CurlTool() {
           <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800 shadow-sm relative group overflow-hidden">
              <div className="absolute top-0 right-0 p-2">
               <button 
-                  onClick={() => navigator.clipboard.writeText(generateCurlCommand())}
-                  className="p-2 text-zinc-500 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                  title="Copy to clipboard"
+                  onClick={handleCopy}
+                  className={`p-2 rounded-lg transition-all focus:opacity-100 ${copied ? 'bg-emerald-500/20 text-emerald-600 opacity-100' : 'text-zinc-500 hover:text-white bg-zinc-800/50 hover:bg-zinc-800 opacity-0 group-hover:opacity-100'}`}
+                  title={copied ? "Copied!" : "Copy to clipboard"}
+                  aria-label={copied ? "Copied to clipboard" : "Copy curl command to clipboard"}
               >
-                <Copy className="w-3.5 h-3.5" />
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
              </div>
              <pre className="text-xs text-zinc-400 font-mono whitespace-pre-wrap break-all">
