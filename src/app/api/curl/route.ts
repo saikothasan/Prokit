@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isSafeUrl } from '@/lib/security';
 
 interface CurlRequest {
   method: string;
@@ -14,6 +15,14 @@ export async function POST(req: NextRequest) {
 
     if (!url || !method) {
       return NextResponse.json({ error: 'URL and Method are required' }, { status: 400 });
+    }
+
+    // Validate URL to prevent SSRF
+    if (!isSafeUrl(url)) {
+      return NextResponse.json({
+        error: 'Invalid URL',
+        details: 'The provided URL is not allowed (SSRF protection).'
+      }, { status: 400 });
     }
 
     // 1. Start Timer
