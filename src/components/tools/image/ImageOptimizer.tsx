@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Upload, Download, Settings, Image as ImageIcon, 
   RefreshCw, FileImage, Maximize2
@@ -38,16 +38,40 @@ export default function ImageOptimizer() {
   const [resizeMode, setResizeMode] = useState<'original' | 'custom'>('original');
   const [width, setWidth] = useState<number>(0);
 
+  // ⚡ Bolt Optimization: Proper memory management for Object URLs.
+  // This prevents memory leaks by revoking URLs when the file changes or component unmounts.
+  useEffect(() => {
+    if (!file) {
+      setPreview('');
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
+
+    // Get dimensions efficiently reusing the same URL
+    const img = new Image();
+    img.onload = () => setWidth(img.width);
+    img.src = objectUrl;
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
+
+  // Cleanup result image URL when it changes
+  useEffect(() => {
+    return () => {
+      if (result?.image) {
+        URL.revokeObjectURL(result.image);
+      }
+    };
+  }, [result]);
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
-      const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreview(URL.createObjectURL(selectedFile));
+      setFile(e.target.files[0]);
       setResult(null);
-      
-      const img = new Image();
-      img.onload = () => setWidth(img.width);
-      img.src = URL.createObjectURL(selectedFile);
     }
   };
 
