@@ -66,31 +66,39 @@ export default function BinChecker() {
              <label htmlFor="bin-input" className="text-lg font-medium text-gray-900 dark:text-white">
                Enter First 6-8 Digits
              </label>
-             <div className="relative">
+             <form
+               onSubmit={(e) => {
+                 e.preventDefault();
+                 handleCheck();
+               }}
+               className="relative"
+             >
                 <input
                   id="bin-input"
                   value={bin}
                   onChange={(e) => setBin(e.target.value)}
                   placeholder="4532 11..."
                   maxLength={8}
+                  inputMode="numeric"
                   className="w-full p-5 pl-14 text-xl rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all font-mono tracking-wider"
                 />
                 <CreditCard className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 w-6 h-6" />
                 <button 
-                  onClick={handleCheck}
+                  type="submit"
                   disabled={loading || bin.length < 6}
+                  aria-label={loading ? 'Checking BIN...' : 'Check BIN'}
                   className="absolute right-3 top-2 bottom-2 bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   {loading ? <Loader2 className="animate-spin w-5 h-5" /> : 'Check'}
                 </button>
-             </div>
+             </form>
              <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
                <Info className="w-3 h-3" /> We do not store or log any card data.
              </p>
            </div>
 
            {error && (
-             <div className="p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 border border-red-100 dark:border-red-900/20 animate-in fade-in slide-in-from-top-2">
+             <div role="alert" className="p-4 bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 border border-red-100 dark:border-red-900/20 animate-in fade-in slide-in-from-top-2">
                <AlertCircle className="w-5 h-5" /> {error}
              </div>
            )}
