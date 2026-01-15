@@ -18,18 +18,54 @@ interface CryptoRequestBody {
 
 const ALGORITHM = 'aes-256-cbc';
 
+// Security Limits to prevent DoS
+const MAX_RSA_LENGTH = 4096;
+const MAX_SECRET_LENGTH = 1024; // 1KB limit for random bytes
+const MAX_INPUT_LENGTH = 65536; // 64KB limit for text input
+
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as CryptoRequestBody;
-    const { action, type, length, input, secretKey } = body;
+    // eslint-disable-next-line prefer-const
+    let { action, type, length, input, secretKey } = body;
+
+    // Sanitize length
+    if (length !== undefined) {
+      length = Number(length);
+      if (isNaN(length) || length < 0) {
+        return NextResponse.json({ error: 'Invalid length parameter' }, { status: 400 });
+      }
+    }
+
+    // Global Input Validation
+    if (input && input.length > MAX_INPUT_LENGTH) {
+      return NextResponse.json(
+        { error: `Input exceeds maximum length of ${MAX_INPUT_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (secretKey && secretKey.length > MAX_INPUT_LENGTH) {
+      return NextResponse.json(
+        { error: `Secret key exceeds maximum length of ${MAX_INPUT_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
 
     let result: Record<string, string> = {};
 
     switch (action) {
       case 'generate':
         if (type === 'rsa') {
+          const modLength = length || 2048;
+          if (modLength > MAX_RSA_LENGTH) {
+             return NextResponse.json(
+              { error: `RSA key length cannot exceed ${MAX_RSA_LENGTH} bits` },
+              { status: 400 }
+            );
+          }
           const { publicKey, privateKey } = generateKeyPairSync('rsa', {
-            modulusLength: length || 2048,
+            modulusLength: modLength,
             publicKeyEncoding: { type: 'spki', format: 'pem' },
             privateKeyEncoding: { type: 'pkcs8', format: 'pem' }
           });
@@ -39,7 +75,14 @@ export async function POST(req: NextRequest) {
           result = { output: `pk_live_${randomBytes(24).toString('hex')}` };
         }
         else if (type === 'secret') {
-          result = { output: randomBytes(length || 64).toString('base64') };
+          const byteLength = length || 64;
+          if (byteLength > MAX_SECRET_LENGTH) {
+            return NextResponse.json(
+              { error: `Random bytes length cannot exceed ${MAX_SECRET_LENGTH}` },
+              { status: 400 }
+            );
+          }
+          result = { output: randomBytes(byteLength).toString('base64') };
         }
         else if (type === 'uuid') {
           result = { output: randomUUID() };
