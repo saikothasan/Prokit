@@ -67,24 +67,41 @@ export default function SslInspector() {
     <div className="space-y-12">
       {/* Input Section */}
       <div className="bg-white dark:bg-[#111] rounded-3xl p-8 border border-gray-200 dark:border-gray-800 shadow-sm">
-        <form onSubmit={checkSsl} className="flex gap-4 max-w-3xl mx-auto mb-8">
-          <input
-            type="text"
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            placeholder="example.com"
-            className="flex-1 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-black focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-          />
-          <button
-            disabled={loading || !domain}
-            className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-          >
-            {loading ? 'Scanning...' : <><Search size={20} /> Inspect</>}
-          </button>
-        </form>
+        <div className="max-w-3xl mx-auto mb-8">
+          <label htmlFor="domain-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 ml-1">
+            Domain Name or IP Address
+          </label>
+          <form onSubmit={checkSsl} className="flex gap-4">
+            <input
+              id="domain-input"
+              type="text"
+              value={domain}
+              onChange={(e) => setDomain(e.target.value)}
+              placeholder="example.com"
+              aria-invalid={!!error}
+              aria-describedby={error ? "ssl-error" : undefined}
+              className={`flex-1 p-4 rounded-xl border bg-gray-50 dark:bg-black focus:ring-4 outline-none transition-all ${
+                error
+                  ? 'border-red-300 dark:border-red-800 focus:ring-red-500/20 focus:border-red-500'
+                  : 'border-gray-200 dark:border-gray-700 focus:ring-blue-500/20 focus:border-blue-500'
+              }`}
+            />
+            <button
+              disabled={loading || !domain}
+              aria-busy={loading}
+              className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+            >
+              {loading ? 'Scanning...' : <><Search size={20} /> Inspect</>}
+            </button>
+          </form>
+        </div>
 
         {error && (
-          <div className="max-w-3xl mx-auto p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 border border-red-100 dark:border-red-900/50">
+          <div
+            id="ssl-error"
+            role="alert"
+            className="max-w-3xl mx-auto p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl flex items-center gap-2 border border-red-100 dark:border-red-900/50"
+          >
             <AlertCircle size={18} /> {error}
           </div>
         )}
