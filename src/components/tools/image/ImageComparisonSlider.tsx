@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, memo } from 'react';
 import { MoveHorizontal } from 'lucide-react';
 
 interface ImageComparisonSliderProps {
@@ -8,7 +8,7 @@ interface ImageComparisonSliderProps {
   optimized: string;
 }
 
-export function ImageComparisonSlider({ original, optimized }: ImageComparisonSliderProps) {
+export const ImageComparisonSlider = memo(function ImageComparisonSlider({ original, optimized }: ImageComparisonSliderProps) {
   // ⚡ Bolt Optimization: Use refs for direct DOM manipulation.
   // This prevents React re-renders on every mouse move (60+ times/sec),
   // which is expensive for image-heavy components.
@@ -90,4 +90,4 @@ export function ImageComparisonSlider({ original, optimized }: ImageComparisonSl
       <div className="absolute top-4 right-4 bg-green-600/80 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-md">Optimized</div>
     </div>
   );
-}
+});
