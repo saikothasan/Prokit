@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils'; 
 import { ImageComparisonSlider } from './ImageComparisonSlider';
+import { QualitySelector } from './QualitySelector';
 
 interface OptimizationResult {
   originalSize: number;
@@ -34,7 +35,9 @@ export default function ImageOptimizer() {
 
   // Settings
   const [format, setFormat] = useState('avif');
-  const [quality, setQuality] = useState(80);
+  // ⚡ Bolt Optimization: Use ref instead of state for quality to prevent
+  // re-rendering the entire component tree on every slider drag event.
+  const qualityRef = React.useRef(80);
   const [resizeMode, setResizeMode] = useState<'original' | 'custom'>('original');
   const [width, setWidth] = useState<number>(0);
 
@@ -60,7 +63,7 @@ export default function ImageOptimizer() {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('format', format);
-      fd.append('quality', quality.toString());
+      fd.append('quality', qualityRef.current.toString());
       fd.append('fit', 'contain'); 
       
       if (resizeMode === 'custom' && width > 0) {
@@ -186,17 +189,10 @@ export default function ImageOptimizer() {
                 </div>
 
                 {/* Quality Slider */}
-                <div className="space-y-4">
-                   <div className="flex justify-between items-center">
-                      <label className="text-xs font-bold uppercase tracking-wider text-zinc-500">Quality</label>
-                      <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">{quality}%</span>
-                   </div>
-                   <input 
-                     type="range" min="10" max="100" value={quality}
-                     onChange={(e) => setQuality(Number(e.target.value))}
-                     className="w-full h-2 bg-zinc-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                   />
-                </div>
+                <QualitySelector
+                  defaultValue={qualityRef.current}
+                  onChange={(val) => qualityRef.current = val}
+                />
 
                 {/* Dimensions */}
                  <div className="space-y-3">
