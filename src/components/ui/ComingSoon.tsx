@@ -8,7 +8,7 @@ export default function ComingSoon() {
       {/* Icon Container */}
       <div className="relative mb-6">
         <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 rounded-full blur-xl opacity-50" />
-        <div className="relative bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="relative bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700" aria-hidden="true">
           <Construction className="w-10 h-10 text-blue-600 dark:text-blue-400" />
         </div>
       </div>
@@ -27,7 +27,7 @@ export default function ComingSoon() {
         href="/"
         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-sm hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" />
+        <ArrowLeft className="w-4 h-4" aria-hidden="true" />
         Explore Other Tools
       </Link>
     </div>
