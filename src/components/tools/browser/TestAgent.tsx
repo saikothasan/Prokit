@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Play,
   Loader2,
@@ -22,18 +23,14 @@ import {
   PieChart as PieChartIcon,
   Accessibility,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  PieChart,
-  Pie,
-} from 'recharts';
+
+// Lazy load charts
+const PerformanceChart = dynamic(() => import('./PerformanceChart'), {
+  loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-800/50 rounded-lg animate-pulse text-sm text-zinc-500">Loading Chart...</div>
+});
+const ResourceChart = dynamic(() => import('./ResourceChart'), {
+  loading: () => <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-zinc-800/50 rounded-lg animate-pulse text-sm text-zinc-500">Loading Chart...</div>
+});
 
 // --- Types ---
 
@@ -164,41 +161,6 @@ export default function TestAgent() {
     : [];
 
   const RESOURCE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
-
-  // --- Components ---
-
-  const CustomTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    payload?: any[];
-    label?: string;
-  }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white dark:bg-zinc-900 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl text-sm">
-          <p className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{data.full || label}</p>
-          <div className="space-y-1">
-            <p className="text-zinc-600 dark:text-zinc-400">
-              Value: <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                {typeof data.value === 'number' && data.value > 1000
-                 ? `${(data.value / 1024).toFixed(1)} KB`
-                 : `${data.value.toFixed(0)} ${data.full ? 'ms' : 'bytes'}`}
-              </span>
-            </p>
-            {data.count && (
-               <p className="text-zinc-500">Count: {data.count}</p>
-            )}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -425,21 +387,7 @@ export default function TestAgent() {
                     <Activity className="w-5 h-5 text-indigo-500" />
                     Load Timing (ms)
                   </h3>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={perfChartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" vertical={false} opacity={0.2} />
-                        <XAxis dataKey="name" stroke="#71717a" tick={{ fill: '#71717a', fontSize: 12 }} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 12 }} tickLine={false} axisLine={false} />
-                        <Tooltip cursor={{ fill: 'transparent' }} content={<CustomTooltip />} />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]} animationDuration={1500}>
-                          {perfChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
+                  <PerformanceChart data={perfChartData} />
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -457,24 +405,7 @@ export default function TestAgent() {
                         <h3 className="text-lg font-semibold mb-4 text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                             <PieChartIcon className="w-5 h-5 text-indigo-500" /> Resource Breakdown (Size)
                         </h3>
-                        <ResponsiveContainer width="100%" height="100%">
-                             <PieChart>
-                                <Pie
-                                    data={resourceChartData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={60}
-                                    outerRadius={100}
-                                    paddingAngle={5}
-                                    dataKey="value"
-                                >
-                                    {resourceChartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={RESOURCE_COLORS[index % RESOURCE_COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip content={<CustomTooltip />} />
-                             </PieChart>
-                        </ResponsiveContainer>
+                        <ResourceChart data={resourceChartData} colors={RESOURCE_COLORS} />
                     </div>
 
                     <div className="space-y-4">
