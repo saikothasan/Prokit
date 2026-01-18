@@ -76,7 +76,7 @@ export default function ScreenshotTool() {
         </div>
 
         <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-          <form onSubmit={handleScreenshot} className="flex gap-4 flex-col sm:flex-row">
+          <form onSubmit={handleScreenshot} className="flex gap-4 flex-col sm:flex-row" aria-busy={loading}>
             <div className="flex-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Globe className="h-5 w-5 text-zinc-400" />
@@ -84,6 +84,9 @@ export default function ScreenshotTool() {
               <input
                 type="text"
                 placeholder="Enter website URL (e.g., google.com)"
+                aria-label="Website URL"
+                aria-invalid={!!error}
+                aria-describedby={error ? "screenshot-error" : undefined}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded-xl pl-10 pr-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
@@ -109,7 +112,12 @@ export default function ScreenshotTool() {
           </form>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl flex items-start gap-3 border border-red-100 dark:border-red-900/30">
+            <div
+              id="screenshot-error"
+              role="alert"
+              aria-live="assertive"
+              className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl flex items-start gap-3 border border-red-100 dark:border-red-900/30"
+            >
               <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
               <div>
                 <span className="font-semibold block">Capture Failed</span>
